@@ -2,7 +2,7 @@ var mongoose = require('mongoose')
 var Schema = mongoose.Schema;
 var bcrypt = require('bcryptjs');
 
-var MODEL_NAME = "User"
+var MODEL_NAME = "Tenant"
 
 var schema = new Schema({
     firstname: {
@@ -58,6 +58,14 @@ var schema = new Schema({
 
 schema.methods.comparePassword = function(password){
     return bcrypt.compare(password, this.password);
+}      
+
+module.exports =  { 
+    
+    tenantModel: mongoose.models[MODEL_NAME] || mongoose.model(MODEL_NAME, schema),
+    tenantSchema: schema
+
 }
 
-module.exports = mongoose.models[MODEL_NAME] || mongoose.model(MODEL_NAME, schema);
+
+
