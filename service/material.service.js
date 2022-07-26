@@ -10,20 +10,31 @@ module.exports.upateMaterial = async(data, MaterialModel) => {
 
 }
 
-module.exports.deleteMaterial = async(data, MaterialModel) => {
-
+module.exports.deleteMaterial = async(id, MaterialModel) => {
+    return await MaterialModel.deleteOne({_id: id})
 }
 
 module.exports.countMaterials = async(MaterialModel) => {
     return await MaterialModel.estimatedDocumentCount();
 }
 
-module.exports.findMaterialsFromArrayIds = async(arrayIds, MaterialModel) => {
-    return await MaterialModel.find({_id: { $in: arrayIds} })
+module.exports.findMaterialsFromArrayIds = async(arrayIds, MaterialModel, offset, limit) => {
+    return await MaterialModel.paginate({_id: { $in: arrayIds} }, {offset,limit})
 }
 
-module.exports.getAllMaterials = async(MaterialModel, pagination) => {
-    return await MaterialModel.paginate({}, pagination);
+module.exports.getAllMaterials = async(MaterialModel, pagination, searchTerm, status) => {
+    let query = {}
+
+    switch(status){
+        case "Low":
+            query = {...query, $expr: { $gt: [ "$lowLevel" , "$quantity_in_stock" ] }}
+        break;
+        case "Normal":
+            query = {...query, $expr: { $gte: [ "$quantity_in_stock" , "$lowLevel" ] }}
+        break;
+    }
+
+    return await MaterialModel.paginate(query, pagination);
 }
 
 module.exports.getMaterialsSearch = async(searchTerm, MaterialModel, pagination) => {
@@ -43,7 +54,6 @@ module.exports.getAllMaterialsToAdd = async(MaterialModel) => {
     return await MaterialModel.find({}).lean()
 }
 
-
 module.exports.getMaterialFromId = async(data, MaterialModel) => {
 
 }
@@ -53,5 +63,13 @@ module.exports.getMaterialCount = async(data, MaterialModel) => {
 }
 
 module.exports.updateMaterial = async(id, data, MaterialModel) => {
+    const material = await MaterialModel.findOne({_id:id})
 
+    if(material){
+        material.set(data);
+
+        return await material.save();
+    }
+    
+    return null;
 }

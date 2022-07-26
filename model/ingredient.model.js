@@ -32,6 +32,9 @@ const schema = new Schema({
     quantity_in_stock: {
         required: true,
         type: Number
+    },
+    lowLevel:{
+        type: Number
     }
 })
 

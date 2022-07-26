@@ -16,7 +16,7 @@ module.exports.getAllProducts = async (ProductModel, pagination) => {
 }
 
 module.exports.getProductsSearch = async (name, ProductModel, pagination) => {
-    return await ProductModel.find({ $text: { $search: name } , score: { $meta: "textScore" } })
+    return await ProductModel.find({ $text: { $search: name } }, { score: { $meta: "textScore" } })
             .sort( { score: { $meta: "textScore" } } )
             .limit(pagination.limit)
             .skip(pagination.offset)

@@ -285,6 +285,10 @@ module.exports = function(router){
         userController.getMaterialsToAdd(req,res)
     })
 
+    router.get("/inventory/recipes_to_add", function(req,res){
+        userController.getRecipesToAdd(req,res)
+    })
+
 }
 
 
