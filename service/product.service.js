@@ -15,16 +15,24 @@ module.exports.getAllProducts = async (ProductModel, pagination) => {
     return await ProductModel.paginate({}, pagination)
 }
 
-module.exports.getProductsSearch = async (name, ProductModel, pagination) => {
-    return await ProductModel.find({ $text: { $search: name } }, { score: { $meta: "textScore" } })
-            .sort( { score: { $meta: "textScore" } } )
-            .limit(pagination.limit)
-            .skip(pagination.offset)
-            .exec()
+module.exports.getProductsSearch = async (name, ProductModel, {offset, limit}) => {
+    return await ProductModel.paginate({ $text: { $search: name } }, {offset, limit})
 }
 
 module.exports.getProduct = async (id, ProductModel) => {
     return await ProductModel.findOne({_id: id})
+}
+
+module.exports.getProductsFromIdsArray = async (arrayOfIds, ProductModel, offset, limit) => {
+    return await ProductModel.paginate({_id: {$in: arrayOfIds}}, {offset, limit})
+}
+
+module.exports.getProductsNotInArray = async(data_array, ProductModel) => {
+    return await ProductModel.find({_id: {$nin: data_array}}).lean()
+}
+
+module.exports.getAllProductsToAdd = async(ProductModel) => {
+    return await ProductModel.find({}).lean()
 }
 
 module.exports.deleteProduct = async(id, ProductModel) => {

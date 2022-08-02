@@ -41,7 +41,7 @@ var schema = new Schema({
 
 schema.plugin(mongoosePaginate);
 
-schema.index({name: "text"}, {unique:true});
+schema.index({name: "text"});
 
 module.exports = { 
     recipeModel: mongoose.models[MODEL_NAME] || mongoose.model(MODEL_NAME, schema),

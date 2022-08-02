@@ -24,8 +24,13 @@ const schema = new Schema({
         default: Date.now()
     },
     products: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Product',
+        product:{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Product',
+        },
+        quantity: {
+            type: Number,
+        }
     }]
 })
 

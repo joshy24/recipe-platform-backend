@@ -16,12 +16,12 @@ module.exports.getAllRecipes = async (RecipeModel, pagination) => {
 }
 
 module.exports.getRecipesSearch = async (name, RecipeModel) => {
-    return await RecipeModel.find({ $text: { $search: name } , score: { $meta: "textScore" } })
-            .sort( { score: { $meta: "textScore" } } )
+    //Needs to be refactored
+    return await RecipeModel.paginate({ $text: { $search: name } }, {offset: 0, limit: 1000})
 }
 
-module.exports.findRecipesFromArrayIds = async(arrayIds, RecipeModel) => {
-    return await RecipeModel.find({_id: { $in: arrayIds} })
+module.exports.findRecipesFromArrayIds = async(arrayIds, RecipeModel, offset, limit) => {
+    return await RecipeModel.paginate({_id: { $in: arrayIds} }, {offset,limit})
 }
 
 module.exports.getRecipesNotInArray = async(data_array, RecipeModel) => {
@@ -33,7 +33,7 @@ module.exports.getAllRecipesToAdd = async(RecipeModel) => {
 }
 
 module.exports.getRecipe = async (id, RecipeModel) => {
-    return await RecipeModel.findOne({_id: id})
+    return await RecipeModel.findOne({_id: id}).lean()
 }
 
 module.exports.deleteRecipe = async(id, RecipeModel) => {

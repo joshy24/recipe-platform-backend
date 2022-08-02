@@ -157,6 +157,10 @@ module.exports = function(router){
         userController.addProduct(req,res)
     });
 
+    router.get("/products/products_to_add", function(req,res){
+        userController.getProductstoAdd(req,res)
+    })
+
 
     //Product
 

@@ -140,7 +140,7 @@ module.exports.getAllRecipes = async(req,res) => {
 
         const allRecipesArray = await Promise.all(allRecipes.docs.map(async (aRecipe) => {
 
-            let recipeIngredientsIdsArray = aRecipe.ingredients.map(async (ingredient) => {
+            let recipeIngredientsIdsArray = aRecipe.ingredients.map(ingredient => {
                 return ingredient.ingedient;
             })
     
@@ -175,9 +175,34 @@ module.exports.searchRecipes = async(req,res) => {
     }
 
     try{
-        const results = await RecipeService.getRecipesSearch(searchTerm, req.tenantModels.recipeModel)
+        const allRecipes = await RecipeService.getRecipesSearch(searchTerm, req.tenantModels.recipeModel)
 
-        return res.status(200).send({response: results})
+        if(allRecipes.docs && allRecipes.docs.length == 0 ){
+            return res.status(200).send({response: allRecipes})
+        }
+
+        const allRecipesArray = await Promise.all(allRecipes.docs.map(async (aRecipe) => {
+
+            let recipeIngredientsIdsArray = aRecipe.ingredients.map(ingredient => {
+                return ingredient.ingedient;
+            })
+    
+            const fullIngredientObjects = await IngredientService.findIngredientsFromArrayIdsNoPagination(recipeIngredientsIdsArray, req.tenantModels.ingredientModel)
+    
+            const recipeIngredientsCost = 0;
+
+            fullIngredientObjects.map(fullIngredientObject => {
+                const foundIngredient = aRecipe.ingredients.find(recipeIngredient => recipeIngredient.iongredient.toString() == fullIngredientObject._id.toString())
+    
+                recipeIngredientsCost += (foundIngredient.quantity * fullIngredientObject.price) 
+            })
+
+            const newRecipeObject = {...aRecipe._doc, totalCost: recipeIngredientsCost}
+
+            return newRecipeObject
+        }))
+
+        return res.status(200).send({response: {...allRecipes, docs: allRecipesArray}})
     }
     catch(err){
         return res.status(500).send({response: err})
@@ -219,14 +244,14 @@ module.exports.getRecipe = async(req,res) => {
 }
 
 module.exports.editRecipe = async (req,res) => {
-    const {name,description, category, yield, ingredients, id} = req.body
+    const {name,description, category, yield, ingredients, _id} = req.body
 
-    if(!id){
+    if(!_id){
         return res.status(400).send({response: "bad request"})
     }
 
     try{
-        let updatedRecipe = await RecipeService.updateRecipe(id, {name,description, category, yield, ingredients}, req.tenantModels.recipeModel)
+        let updatedRecipe = await RecipeService.updateRecipe(_id, {name,description, category, yield, ingredients}, req.tenantModels.recipeModel)
     
         return res.status(200).send({updatedRecipe})
     }
@@ -243,9 +268,9 @@ module.exports.deleteRecipe = async(req,res) => {
     }
 
     try{
-        let updatedRecipe = await RecipeService.deleteRecipe(id, req.tenantModels.recipeModel)
-    
-        return res.status(200).send({response: updatedRecipe})
+        let deletedRecipe = await RecipeService.deleteRecipe(id, req.tenantModels.recipeModel)
+        
+        return res.status(200).send({response: deletedRecipe})
     }
     catch(err){
         return res.status(500).send({response: err})
@@ -358,30 +383,22 @@ module.exports.getRecipeIngredients = async(req,res) => {
             return res.status(200).send({response: []})
         }
 
-        let recipeIngredientsIdsArray = recipe.ingredients.map(async (ingredient) => {
-            return ingredient.ingedient;
+        let recipeIngredientsIdsArray = recipe.ingredients.map(ingredient => {
+            return ingredient.ingredient;
         })
 
-        const fullIngredientObjects = await IngredientService.findIngredientsFromArrayIds(recipeIngredientsIdsArray, req.tenantModels.ingredientModel, {offset,limit})
+        const fullIngredientObjects = await IngredientService.findIngredientsFromArrayIds(recipeIngredientsIdsArray, req.tenantModels.ingredientModel, offset,limit)
+        
+        const recipeIngredients = fullIngredientObjects.docs.map(fullIngredientObject => {
+            const foundIngredient = recipe.ingredients.find(recipeIngredient => recipeIngredient.ingredient.toString() == fullIngredientObject._id.toString())
 
-        const recipeIngredients = fullIngredientObjects.map(fullIngredientObject => {
-            const foundIngredient = recipe.ingredients.find(recipeIngredient => recipeIngredient.iongredient.toString() == fullIngredientObject._id.toString())
-
-            return {...fullIngredientObject, quantity: foundIngredient.quantity}
+            return {...fullIngredientObject._doc, quantity: foundIngredient.quantity, totalCost: foundIngredient.quantity*fullIngredientObject.price}
         })
-
-        /*
-        Old Code 
-
-        let recipeIngredients = recipe.ingredients.map(async (ingredient) => {
-            let foundIngredient = await IngredientService.getIngredientFromId(ingredient.ingredient, req.tenantModels.ingredientModel, offset, limit)
-
-            return {...foundIngredient, quantity: ingredient.quantity, price: ingredient.quantity*foundIngredient.price}
-        })*/
 
         return res.status(200).send({response: recipeIngredients})
     }
     catch(err){
+        console.log(err)
         return res.status(500).send({response: err})
     }
 }
@@ -573,7 +590,6 @@ module.exports.editInventoryMaterial = async(req,res) => {
     }
 }
 
-
 module.exports.getIngredientsToAdd = async(req,res) => {
     const { recipe_id } = req.query
 
@@ -582,25 +598,29 @@ module.exports.getIngredientsToAdd = async(req,res) => {
     }
 
     try{
-        const recipe = await RecipeService.getRecipe(recipe_id)
+        const recipe = await RecipeService.getRecipe(recipe_id, req.tenantModels.recipeModel)
 
         if(!recipe){
             return res.status(404).send({response: "recipe not found"})
         }
 
-        if(recipe.ingredients.length == 0){
-            return res.status(200).send({response: []})
-        }
-
-        const recipe_ingredients_ids = recipe.ingredients.map(ingredient => {
-            return ingredient.ingredient
-        })
-
-        const ingredients_found = await IngredientService.getIngredientsNotInArray(recipe_ingredients_ids, req.tenantModels.ingredientModel)
+        if(recipe.ingredients.length > 0){
+            const recipe_ingredients_ids = recipe.ingredients.map(ingredient => {
+                return ingredient.ingredient
+            })
     
-        return res.status(200).send({response: ingredients_found})
+            const ingredients_found = await IngredientService.getIngredientsNotInArray(recipe_ingredients_ids, req.tenantModels.ingredientModel)
+        
+            return res.status(200).send({response: ingredients_found})
+        }
+        else{
+            const ingredients_found = await IngredientService.getAllIngredientsToAdd(req.tenantModels.ingredientModel)
+
+            return res.status(200).send({response: ingredients_found})
+        }
     }
     catch(err){
+        console.log(err)
         return res.status(500).send({response: err})
     }
 }
@@ -633,7 +653,6 @@ module.exports.getMaterialsToAdd = async(req,res) => {
 
             return res.status(200).send({response: materials_found})
         }
-        
     }
     catch(err){
         console.log(err)
@@ -815,7 +834,7 @@ module.exports.addMaterialsToProduct = async(req,res) => {
             return res.status(400).send({response: "product not found"})
         }
 
-        product.materials = [...product.materials, ...materials ]
+        product.materials = [...product.materials, ...materials]
 
         let updatedProduct = await ProductService.updateProduct(id, product, req.tenantModels.productModel)
     
@@ -996,14 +1015,14 @@ module.exports.getProductRecipes = async(req,res) => {
             })
     
             //find all recipes based on the array of ids
-            const arrayOfFullRecipeObjects = await RecipeService.findRecipesFromArrayIds(productRecipesIdsArray);
+            const arrayOfFullRecipeObjects = await RecipeService.findRecipesFromArrayIds(productRecipesIdsArray, req.tenantModels.recipeModel, offset, limit);
     
             if(arrayOfFullRecipeObjects.docs.length == 0){
                 return res.status(200).send({response: {}})
             }
 
             //for each recipe set the amount of the yield
-            const arrayOfUpdatedFullRecipes = Promise.all(arrayOfFullRecipeObjects.map(async fullRecipeObject => {
+            const arrayOfUpdatedFullRecipes = await Promise.all(arrayOfFullRecipeObjects.docs.map(async fullRecipeObject => {
                 const aFoundRecipe = product.recipes.find(recipe => recipe.recipe.toString() === fullRecipeObject._id.toString());
     
                 fullRecipeObject.yield.amount = aFoundRecipe.amount
@@ -1011,26 +1030,27 @@ module.exports.getProductRecipes = async(req,res) => {
                 const recipeIngredientsIdsArray = fullRecipeObject.ingredients.map(ingredientInRecipe => {
                     return ingredientInRecipe.ingredient;
                 })
-    
-                const fullIngredientsObjects = await IngredientService.findIngredientsFromArrayIds(recipeIngredientsIdsArray, req.tenantModels.recipeModel,offset,limit)
+
+                const fullIngredientsObjects = await IngredientService.findIngredientsFromArrayIds(recipeIngredientsIdsArray, req.tenantModels.ingredientModel, 0, 1000)
     
                 let totalRecipeCost = 0;
-    
-                fullIngredientsObjects.map(fullIngredientObject => {
+
+                fullIngredientsObjects.docs.map(fullIngredientObject => {
                     const aFoundIngredient = fullRecipeObject.ingredients.find(ingredient => ingredient.ingredient.toString() === fullIngredientObject._id.toString());
-    
+                    
                     totalRecipeCost += fullIngredientObject.price * aFoundIngredient.quantity;
                 })
     
-                return {...fullRecipeObject, cost: totalRecipeCost};
+                return {...fullRecipeObject._doc, cost: totalRecipeCost};
             }))
 
-            return res.status(200).send({response: arrayOfUpdatedFullRecipes})
+            return res.status(200).send({response: {...arrayOfFullRecipeObjects, docs: arrayOfUpdatedFullRecipes}})
         }
 
         return res.status(200).send({response: []})
     }
     catch(err){
+        console.log(err)
         return res.status(500).send({response: err})
     }
 }
@@ -1080,4 +1100,294 @@ module.exports.getProductMaterials = async(req,res) => {
         console.log(err)
         return res.status(500).send({response: err})
     }
+}
+
+
+
+
+
+
+
+//Orders
+
+module.exports.getAllOrders = async (req,res) => {
+    const { offset, limit } = req.query;
+    
+    if(!offset || !limit){
+        return res.status(400).send({response: "bad request"})
+    }
+
+    try{
+        let allOrders = await OrderService.getAllOrders(req.tenantModels.orderModel, { offset, limit })
+
+        if(allOrders.docs.length > 0){
+            const allOrdersArray = await Promise.all(allOrders.docs.map(async (anOrder) => {
+
+                if(anOrder.products.length > 0){
+                    const orderProductsIds = anOrder.products.map(product => {
+                        return product.product
+                    })
+    
+                    const orderProductObjects = await ProductService.getProductsFromIdsArray(orderProductsIds, req.tenantModels.productModel, 1, 1000)
+
+                    const totalCost = orderProductObjects.reduce((acc,product) => {
+                        return acc + product.actual_selling_price ? product.actual_selling_price : 0
+                    }, 0)
+
+                    return {...anOrder._doc, totalCost:totalCost}
+                }
+                else{
+                    return {...anOrder._doc, totalCost:0}
+                }
+            }))
+
+            return res.status(200).send({response: {...allOrders, docs: allOrdersArray}})
+        }
+
+        return res.status(200).send({response: allOrders})
+    }
+    catch(err){
+        console.log(err)
+        return res.status(500).send({response: err})
+    }
+}
+
+module.exports.deleteOrder = async (req,res) => {
+    const {id} = req.body
+
+    if(!id){    
+        return res.status(400).send({response: "bad request"})
+    }
+}
+
+module.exports.addOrder = async(req,res) => {
+    const {name, fulfillment_date} = req.body;
+
+    if(!name){
+        return res.status(400).send({response: "bad request"})
+    }
+
+    try{
+        const createdOrder = await OrderService.createOrder({name, fulfillment_date}, req.tenantModels.orderModel)
+
+        return res.status(200).send({response: createdOrder})
+    }
+    catch(err){
+        console.log(err)
+        return res.status(500).send({response: err})
+    }
+}
+
+module.exports.searchOrders = async(req,res) => {
+    const { limit, offset, searchTerm } = req.query;
+
+    if(!limit || !offset || !searchTerm){
+        return res.status(400).send({response: "bad request"})
+    }
+
+    try{
+        let results = await OrderService.getOrdersSearch(searchTerm, req.tenantModels.orderModel, {limit, offset})
+
+        return res.status(200).send({response: results})
+    }
+    catch(err){
+        return res.status(500).send({response: err})
+    }
+}
+
+
+//Order
+
+module.exports.getOrderProducts = async(req,res) => {
+    const {id, offset, limit} = req.query
+
+    if(!id || !offset || !limit){
+        return res.status(400).send({response: "bad request"})
+    }
+
+    try{
+        const order = await OrderService.getOrder(id, req.tenantModels.orderModel)
+
+        if(!order){
+            return res.status(404).send({response: "not found"})
+        }
+
+        if(order.products.length == 0){
+            return res.status(200).send({response: []})
+        }
+
+        const orderProductsIds = order.products.map(product => {
+            return product.product
+        })
+
+        const productsFoundArray = await ProductService.getProductsFromIdsArray(orderProductsIds, req.tenantModels.productModel, offset, limit)
+        
+        const udatedOrderroducts = productsFoundArray.map(productFound => {
+            const foundProduct = order.products.find(aProduct => aProduct.product.toString() === product._id.toString())
+
+            return { ...productFound, quantity: foundProduct.quantity}
+        })
+
+        return res.status(200).send({response: udatedOrderroducts})
+    }
+    catch(err){
+        console.log(err)
+        return res.status(500).send({response: err})
+    }
+}
+
+module.exports.getOrder = async(req,res) => {
+    const {id} = req.query
+
+    if(!id){
+        return res.status(400).send({response: "bad request"})
+    }
+
+    try{
+        const order = await OrderService.getOrder(id, req.tenantModels.orderModel)
+
+        if(!order){
+            return res.status(404).send({response: "not found"})
+        }
+
+        if(order.products.length == 0){
+            return res.status(200).send({response: {...order, totalCost:0}})
+        }
+
+        const orderProductsIds = order.products.map(product => {
+            return product.product
+        })
+
+        const orderProductObjects = await ProductService.getProductsFromIdsArray(orderProductsIds, req,tenantModels.productModel, 1, 1000)
+
+        const totalCost = orderProductObjects.reduce((acc,product) => {
+            return acc + product.actual_selling_price ? product.actual_selling_price : 0
+        }, 0)
+
+        return res.status(200).send({response: {...order, totalCost: totalCost}})
+    }
+    catch(err){
+        console.log(err)
+        return res.status(500).send({response: err})
+    }
+}
+
+module.exports.editOrder = async(req,res) => {
+    const {id, name, fulfillment_date, status} = req.body;
+
+    if(!id || !name){
+        return res.status(400).send({response: "bad request"})
+    }
+
+    try{
+        const editedOrder = await OrderService.updateOrder(id,{name, fulfillment_date, status})
+
+        return res.status(200).send({response: editedOrder})
+    }
+    catch(err){
+
+    }
+}
+
+module.exports.fulfillOrder = async(req,res) => {
+    const {id, name, status} = req.body;
+
+    if(!id || !name || !status){
+        return res.status(400).send({response: "bad request"})
+    }
+
+    try{
+        const editedOrder = await OrderService.updateOrder(id,{name, status})
+
+        return res.status(200).send({response: editedOrder})
+    }
+    catch(err){
+
+    }
+}
+
+module.exports.addProductsToOrder = async(req,res) => {
+    const {id, products} = req.body
+
+    if(!id || !products){
+        return res.status(400).send({response: "bad request"})
+    }
+
+    try{
+        const order = await OrderService.getOrder(id, req.tenantModels.orderModel)
+
+        if(!order){
+            return res.status(404).send({response: "not found"})
+        }
+
+        order.products = [...order.products, ...products]
+
+        let updatedOrder = await OrderService.updateOrder(id, order, req.tenantModels.orderModel)
+    
+        return res.status(200).send({response: updatedOrder})
+    }
+    catch(err){
+        return res.status(500).send({response: err})
+    }
+}
+
+module.exports.editOrderProduct = (req,res) => {
+     
+}
+
+module.exports.deleteOrderProduct = async(req,res) => {
+    const {product_id, id} = req.body
+
+    if(!id || !product_id){
+        return res.status(400).send({response: "bad request"})
+    }
+
+    try{
+        const order = await OrderService.getOrder(id, req.tenantModels.orderModel)
+
+        if(!order){
+            return res.status(404).send({response: "not found"})
+        }
+
+        const newProductsArray = order.products.filter(product => {
+            return product.toString() != product_id.toString();
+        });
+
+        order.products = []
+        order.products = newProductsArray;
+
+        let updatedOrder = await OrderService.updateOrder(id, order, req.tenantModels.orderModel)
+    
+        return res.status(200).send({response: updatedOrder})
+    }
+    catch(err){
+        console.log(err)
+        return res.status(500).send({response: err})
+    }
+}
+
+module.exports.getProductstoAdd = async() => {
+    const {id} = req.body
+
+    if(!id){
+        return res.status(400).send({response: "bad request"})
+    }
+
+    const order = await OrderService.getOrder(id, req.tenantModels.orderModel)
+
+    if(!order){
+        return res.status(404).send({response: "not found"})
+    }
+
+    if(order.products.length > 0){
+        const products_found = await ProductService.getProductsNotInArray(order.products, req.tenantModels.productModel)
+    
+        return res.status(200).send({response: products_found})
+    }
+    else{
+        const products_found = await ProductService.getAllProductsToAdd(req.tenantModels.productModel)
+        
+        return res.status(200).send({response: products_found})
+    }
+
 }

@@ -18,7 +18,7 @@ module.exports.findIngredientsFromArrayIdsNoPagination = async(arrayIds, Ingredi
     return await IngredientModel.find({_id: { $in: arrayIds}}).lean()
 }
 
-module.exports.findIngredientsFromArrayIds = async(arrayIds, IngredientModel) => {
+module.exports.findIngredientsFromArrayIds = async(arrayIds, IngredientModel, offset, limit) => {
     return await IngredientModel.paginate({_id: { $in: arrayIds}},{offset,limit})
 }
 
@@ -42,8 +42,7 @@ module.exports.getAllIngredients = async(IngredientModel, pagination, searchTerm
 }
 
 module.exports.getIngredientsSearch = async(searchTerm, IngredientModel) => {
-    return await IngredientModel.find({ $text: { $search: searchTerm } , score: { $meta: "textScore" } })
-            .sort( { score: { $meta: "textScore" } } )
+    return await IngredientModel.find({ $text: { $search: searchTerm } })
             .limit(pagination.limit)
             .skip(pagination.offset)
             .exec()
@@ -51,6 +50,10 @@ module.exports.getIngredientsSearch = async(searchTerm, IngredientModel) => {
 
 module.exports.getIngredientFromId = async(data, IngredientModel) => {
 
+}
+
+module.exports.getAllIngredientsToAdd = async(IngredientModel) => {
+    return await IngredientModel.find({}).lean()
 }
 
 module.exports.getIngredientsNotInArray = async(data_array, IngredientModel) => {

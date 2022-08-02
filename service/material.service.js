@@ -38,8 +38,7 @@ module.exports.getAllMaterials = async(MaterialModel, pagination, searchTerm, st
 }
 
 module.exports.getMaterialsSearch = async(searchTerm, MaterialModel, pagination) => {
-    return await MaterialModel.find({ $text: { $search: searchTerm } , score: { $meta: "textScore" } })
-            .sort( { score: { $meta: "textScore" } } )
+    return await MaterialModel.find({ $text: { $search: searchTerm }})
             .limit(pagination.limit)
             .skip(pagination.offset)
             .exec()
