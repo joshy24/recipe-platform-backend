@@ -1158,6 +1158,15 @@ module.exports.deleteOrder = async (req,res) => {
     if(!id){    
         return res.status(400).send({response: "bad request"})
     }
+
+    try{
+        const deletedOrder = await OrderService.deleteOrder(id, req.tenantMoment.orderModel)
+
+        return res.status(200).send({response: deletedOrder})
+    }
+    catch(err){
+        return res.status(500).send({response: err})
+    }
 }
 
 module.exports.addOrder = async(req,res) => {
