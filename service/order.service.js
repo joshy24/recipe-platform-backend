@@ -13,6 +13,10 @@ module.exports.getAllOrders = async (OrderModel, pagination) => {
     return await OrderModel.paginate({}, pagination)
 }
 
+module.exports.getRecentOrders = async (OrderModel) => {
+    return await OrderModel.find({}).sort({ created: -1 }).limit(10)
+}
+
 module.exports.getOrdersSearch = async (name, OrderModel) => {
     //Needs to be refactored
     return await OrderModel.paginate({ $text: { $search: name } }, {offset: 0, limit: 1000})

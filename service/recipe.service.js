@@ -24,6 +24,10 @@ module.exports.findRecipesFromArrayIds = async(arrayIds, RecipeModel, offset, li
     return await RecipeModel.paginate({_id: { $in: arrayIds} }, {offset,limit})
 }
 
+module.exports.findRecipesFromArrayIdsNoPagination = async(arrayIds, RecipeModel) => {
+    return await RecipeModel.find({_id: { $in: arrayIds} }).lean()
+}
+
 module.exports.getRecipesNotInArray = async(data_array, RecipeModel) => {
     return await RecipeModel.find({_id: {$nin: data_array}}).lean()
 }
@@ -50,6 +54,10 @@ module.exports.updateRecipe = async(id, new_data, RecipeModel) => {
     }
     
     return null;
+}
+
+module.exports.getRecipesFromIngredientsArray = async(arrayIds, RecipeModel) => {
+    return await RecipeModel.find({'ingredients.ingredient': { $in: arrayIds }}).lean()
 }
 
 module.exports.getRecipesUsingIngredient = async(RecipeModel) => {

@@ -85,6 +85,9 @@ module.exports = function(router){
         userController.deleteOrderProduct(req,res)
     });
 
+    router.get("/order/shopping-list", (req,res) => {
+        userController.getOrderShoppingList(req,res)
+    })
 
 
 

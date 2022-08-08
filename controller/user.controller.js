@@ -7,9 +7,13 @@ const OrderService = require("../service/order.service")
 const TenantService = require("../service/tenant.service")
 const TenantModels = require("../modules/tenantModels.module")
 
+const { MATERIAL, INGREDIENT } = require("../modules/constants.module")
+
 const config = require('../config/config');
 
 const jwt = require("jsonwebtoken")
+
+const mongoose = require('mongoose');
 
 module.exports.login = async(req,res) => {
     const {email, password} = req.body
@@ -117,6 +121,18 @@ module.exports.entitiesCount = async (req,res) => {
     catch(err){
         return res.status(500).send({response: err})
     }
+}
+
+module.exports.recentOrders = async(req,res) => {
+    try{
+        const orders = await OrderService.getRecentOrders(req.tenantModels.orderModel)
+
+        return res.status(200).send({response: orders})
+    }
+    catch(err){
+        return res.status(500).send({response: err})
+    }
+
 }
 
 
@@ -1130,7 +1146,7 @@ module.exports.getAllOrders = async (req,res) => {
     
                     const orderProductObjects = await ProductService.getProductsFromIdsArray(orderProductsIds, req.tenantModels.productModel, 1, 1000)
 
-                    const totalCost = orderProductObjects.reduce((acc,product) => {
+                    const totalCost = orderProductObjects.docs.reduce((acc,product) => {
                         return acc + product.actual_selling_price ? product.actual_selling_price : 0
                     }, 0)
 
@@ -1160,7 +1176,7 @@ module.exports.deleteOrder = async (req,res) => {
     }
 
     try{
-        const deletedOrder = await OrderService.deleteOrder(id, req.tenantMoment.orderModel)
+        const deletedOrder = await OrderService.deleteOrder(id, req.tenantModels.orderModel)
 
         return res.status(200).send({response: deletedOrder})
     }
@@ -1231,13 +1247,13 @@ module.exports.getOrderProducts = async(req,res) => {
 
         const productsFoundArray = await ProductService.getProductsFromIdsArray(orderProductsIds, req.tenantModels.productModel, offset, limit)
         
-        const udatedOrderroducts = productsFoundArray.map(productFound => {
-            const foundProduct = order.products.find(aProduct => aProduct.product.toString() === product._id.toString())
+        const updatedOrderProducts = productsFoundArray.docs.map(productFound => {
+            const foundProduct = order.products.find(aProduct => aProduct.product.toString() === productFound._id.toString())
 
-            return { ...productFound, quantity: foundProduct.quantity}
+            return { ...productFound._doc, quantity: foundProduct.quantity}
         })
 
-        return res.status(200).send({response: udatedOrderroducts})
+        return res.status(200).send({response: updatedOrderProducts})
     }
     catch(err){
         console.log(err)
@@ -1267,9 +1283,9 @@ module.exports.getOrder = async(req,res) => {
             return product.product
         })
 
-        const orderProductObjects = await ProductService.getProductsFromIdsArray(orderProductsIds, req,tenantModels.productModel, 1, 1000)
+        const orderProductObjects = await ProductService.getProductsFromIdsArray(orderProductsIds, req.tenantModels.productModel, 1, 1000)
 
-        const totalCost = orderProductObjects.reduce((acc,product) => {
+        const totalCost = orderProductObjects.docs.reduce((acc,product) => {
             return acc + product.actual_selling_price ? product.actual_selling_price : 0
         }, 0)
 
@@ -1340,8 +1356,48 @@ module.exports.addProductsToOrder = async(req,res) => {
     }
 }
 
-module.exports.editOrderProduct = (req,res) => {
-     
+module.exports.editOrderProduct = async(req,res) => {
+     const {id, product_id, quantity} = req.body
+
+     if(!id || !product_id || !quantity){
+         return res.status(400).send({response: "bad request"})
+     }
+
+     try{
+        const order = await OrderService.getOrder(id, req.tenantModels.orderModel)
+
+        if(!order){
+            return res.status(404).send({response: "order not found"})
+        }
+
+        let foundProduct;
+        let index
+
+        order.products.map(aProduct,i => {
+            if(aProduct.product.toString() === product_id.toString()){
+                foundProduct = aProduct;
+                index = i;
+            }
+        })
+
+        if(foundProduct && index){
+            foundProduct.quantity = quantity
+
+            const newOrderProducts = order.products.splice(index, 1, foundProduct)
+
+            order.products = newOrderProducts
+
+            order.save()
+
+            return res.status(200).send({response: order})
+        }
+        else{
+            return res.status(200).send({response: "bad request"})
+        }
+     }
+     catch(err){
+        return res.status(500).send({response: err})
+     }
 }
 
 module.exports.deleteOrderProduct = async(req,res) => {
@@ -1375,28 +1431,341 @@ module.exports.deleteOrderProduct = async(req,res) => {
     }
 }
 
-module.exports.getProductstoAdd = async() => {
-    const {id} = req.body
+module.exports.getProductstoAdd = async(req,res) => {
+    const {id} = req.query
 
     if(!id){
         return res.status(400).send({response: "bad request"})
     }
 
-    const order = await OrderService.getOrder(id, req.tenantModels.orderModel)
+    try{
+        const order = await OrderService.getOrder(id, req.tenantModels.orderModel)
 
-    if(!order){
-        return res.status(404).send({response: "not found"})
-    }
+        if(!order){
+            return res.status(404).send({response: "not found"})
+        }
 
-    if(order.products.length > 0){
-        const products_found = await ProductService.getProductsNotInArray(order.products, req.tenantModels.productModel)
-    
-        return res.status(200).send({response: products_found})
-    }
-    else{
-        const products_found = await ProductService.getAllProductsToAdd(req.tenantModels.productModel)
+        if(order.products.length > 0){
+            const orderProductsIds = order.products.map(aProduct => {
+                return aProduct.product;
+            })
+
+            const products_found = await ProductService.getProductsNotInArray(orderProductsIds, req.tenantModels.productModel)
         
-        return res.status(200).send({response: products_found})
+            return res.status(200).send({response: products_found})
+        }
+        else{
+            const products_found = await ProductService.getAllProductsToAdd(req.tenantModels.productModel)
+            
+            return res.status(200).send({response: products_found})
+        }
+    }
+    catch(err){
+        console.log(err)
+        return res.status(500).send({response: err})
     }
 
+}
+
+
+
+
+
+
+/*
+*Profit Table 
+*/
+
+module.exports.getProfitTableProductChanges = async(req,res) => {
+    const {type, changeList} = req.query
+
+    if(!type || !changeList){
+        return res.status(400).send({response: "bad request"})
+    }
+
+    try{
+        const aChangeList = JSON.parse(changeList)
+
+        const changeListIds = Object.keys(aChangeList)
+
+        const newListOfMongooseIds = changeListIds.map(changeListItem => {
+            return mongoose.Types.ObjectId(changeListItem);
+        })
+
+        let products;
+
+        if(type.toLowerCase() == MATERIAL || type.toLowerCase().includes(MATERIAL)){
+            products = await ProductService.getProductsFromMaterialsArray(changeListIds, req.tenantModels.productModel) 
+        }
+
+        if(type.toLowerCase() == INGREDIENT || type.toLowerCase().includes(INGREDIENT)){
+            //Pull all recipes from the list of ingredients ids
+            const recipes = await RecipeService.getRecipesFromIngredientsArray(newListOfMongooseIds, req.tenantModels.recipeModel) 
+
+            if(recipes && recipes.length > 0){
+                const recipesIdsArray = recipes.map(aRecipe => {
+                    return aRecipe.recipe
+                })
+
+                //find all products based on the list of recipes ids found above
+                products = await ProductService.getProductsFromRecipesArray(recipesIdsArray, req.tenantModels.productModel) 
+            }
+        }
+
+        
+
+        if(products && products.length > 0){
+            const updatedProducts = await Promise.all(products.map(async aProduct => {
+                //For each product get the total cost with profit margin and without profit margin
+                //Perform calculation
+
+                //1. get cost of all recipes
+                let costOfRecipes = 0
+
+                if(aProduct.recipes.length > 0){
+                    const productRecipeIds = aProduct.recipes.map(aRecipe => {
+                        return aRecipe.recipe
+                    })
+
+                    const allProductRecipes = await RecipeService.findRecipesFromArrayIdsNoPagination(productRecipeIds, req.tenantModels.recipeModel)
+
+                    await Promise.all(allProductRecipes.map(async allProductRecipe => {
+                        const aFoundRecipe = aProduct.recipes.find(aRecipe => aRecipe.recipe._id.toString() === allProductRecipe._id.toString())
+
+                        const recipeQuantity = aFoundRecipe.quantity
+
+                        //get cost of recipe ingredients
+
+                        if(allProductRecipe.ingredients && allProductRecipe.ingredients.length > 0 && recipeQuantity > 0){
+                            const ingredientIds = allProductRecipe.ingredients.map(anIngredient => {
+                                return anIngredient.ingredient
+                            })
+    
+                            //find all full ingredient objects
+                            const allIngredientObjects = await IngredientService.findIngredientsFromArrayIdsNoPagination(ingredientIds, req.tenantModels.ingredientModel)
+    
+                            const allIngredientsCost = allIngredientObjects.reduce( (acc, allIngredientObject) => {
+                                 const aFoundIngredient = allProductRecipe.ingredients.find(anIngredient => anIngredient.ingredient.toString() === allIngredientObject._id.toString())
+                          
+                                 return acc + (allIngredientObject.price * aFoundIngredient.quantity)
+                            },0)
+                        
+                            //join the total cost of the recipe to the total cost of all recipes
+                            
+                            costOfRecipes += (recipeQuantity * allIngredientsCost);
+                        }
+
+                        return true
+                    }))
+                }
+
+                //2. Get Cost of materials
+
+                let costOfMaterials = 0
+
+                if(aProduct.materials.length > 0){
+                    const productMaterialIds = aProduct.materials.map(aMaterial => {
+                        return aMaterial.material
+                    })
+
+                    const allProductMaterials = await MaterialService.findMaterialsFromArrayIdsNoPagination(productMaterialIds, req.tenantModels.materialModel)
+                
+                    costOfMaterials = allProductMaterials.reduce( (acc, aProductMaterial) => {
+                        const aFoundMaterial = aProduct.materials.find(aMaterial => aMaterial.material.toString() == aProductMaterial._id.toString())
+
+                        return acc+(aFoundMaterial.quantity * aProductMaterial.price)
+                    }, 0)
+                }
+
+                const totalCostWithoutProfitMargin = costOfRecipes + costOfMaterials + aProduct.labour_cost + aProduct.overhead_cost
+
+                const totalCostWithProfitMargin = (aProduct.profit_margin / 100 * totalCostWithoutProfitMargin) + totalCostWithoutProfitMargin
+
+                const totalCostWithIncrease = totalCostWithoutProfitMargin + Object.values(aChangeList)[0]
+
+                const newProposedCostPriceWithIncreaseAndProfitMargin = (aProduct.profit_margin / 100 * totalCostWithIncrease) + totalCostWithIncrease
+
+                return {...aProduct._doc, change: Object.values(aChangeList)[0], totalCostWithoutProfitMargin:totalCostWithoutProfitMargin, totalCostWithProfitMargin:totalCostWithProfitMargin, totalCostWithIncrease:totalCostWithIncrease, newProposedCostPriceWithIncreaseAndProfitMargin:newProposedCostPriceWithIncreaseAndProfitMargin}
+            }))
+
+            return res.status(200).send({response: updatedProducts})
+        }
+
+        return res.status(200).send({response: []})
+    }
+    catch(err){
+        console.log(err)
+        return res.status(500).send({response: err})
+    }
+}
+
+
+
+
+
+module.exports.applyProfitTableChanges = async(req,res) => {
+    const {id, type, change} = req.body
+
+    if(!id || !type || !change){
+        return res.status(400).send({response: "bad request"})
+    }
+
+    try{
+        if(type.toLowerCase() == MATERIAL || type.toLowerCase().includes(MATERIAL)){
+            const material = await MaterialService.updateMaterial(id, {purchase_quantity: change}, req.tenantModels.materialModel)
+
+            return res.status(200).send({response: material})
+        }
+
+        if(type.toLowerCase() == INGREDIENT || type.toLowerCase().includes(INGREDIENT)){
+            const ingredient = await IngredientService.updateIngredient(id, {purchase_quantity: change}, req.tenantModels.ingredientModel)
+
+            return res.status(200).send({response: ingredient})
+        }
+    }
+    catch(err){
+        console.log(err)
+        return res.status(500).send({response: err})
+    }
+}
+
+
+
+
+
+
+//Shopping List
+
+module.exports.getOrderShoppingList = async (req,res) => {
+    const {id} = req.query
+
+    if(!id){
+        return res.status(400).send({response: "bad request"})
+    }
+
+    try{
+        const order = await OrderService.getOrder(id, req.tenantModels.orderModel)
+
+        if(!order){
+            return res.status(404).send({response: "Order Not Found"})
+        }
+
+        if(!order.products || order.products.length == 0){
+            return res.status(200).send({response: "Order has no Products", order: order})
+        }
+
+        const orderProductsIds = order.products.map(orderProduct => {
+            return orderProduct.product
+        })
+
+        const orderProducts = await ProductService.getProductsFromIdsArrayNoPagination(orderProductsIds, req.tenantModels.productModel)
+
+        if(!orderProducts || orderProducts.length == 0){
+            return res.status(200).send({response: "Order has no Products", order: order})
+        }
+
+        const orderMaterials = {}
+        const orderIngredients = {}
+
+        await Promise.all(orderProducts.map(async anOrderProduct => {
+            //get All materials and ingredients for this product and add to the object of materials and ingredients respectively
+
+            //We handle the materials part first
+            if(anOrderProduct.materials && anOrderProduct.materials.length > 0){
+                const anOrderProductMaterialsIds = anOrderProduct.materials.map(anOrderProductMaterial => {
+                    return anOrderProductMaterial.material
+                })
+
+                const fullMaterialObjects = await MaterialService.findMaterialsFromArrayIdsNoPagination(anOrderProductMaterialsIds, req.tenantModels.materialModel)
+
+                fullMaterialObjects.map(fullMaterialObject => {
+                    const aFoundMaterial = anOrderProduct.materials.find(anOrderProductMaterial => anOrderProductMaterial.material.toString() === fullMaterialObject._id.toString())
+
+                    if(!orderMaterials[fullMaterialObject._id]){
+                        const cost = aFoundMaterial.quantity * fullMaterialObject.price
+
+                        const resolvedQuantity = fullMaterialObject.quantity_in_stock - aFoundMaterial.quantity
+
+                        const status = resolvedQuantity < 0 ? "LOW" : "NORMAL"
+
+                        const quantityToFulfill = resolvedQuantity < 0 ? Math.abs(fullMaterialObject.quantity_in_stock - aFoundMaterial.quantity) : 0
+
+                        orderMaterials[fullMaterialObject._id] = { ...fullMaterialObject, cost: cost, status: status, quantity: aFoundMaterial.quantity, quantityToFulfill: quantityToFulfill}
+                    }
+                    else{
+                        const cost = (aFoundMaterial.quantity * fullMaterialObject.price) + orderMaterials[fullMaterialObject._id].cost
+
+                        const resolvedQuantity = fullMaterialObject.quantity_in_stock - orderMaterials[fullMaterialObject._id].quantity - aFoundMaterial.quantity
+
+                        const status = resolvedQuantity < 0 ? "LOW" : "NORMAL"
+
+                        const quantityToFulfill = resolvedQuantity < 0 ? Math.abs(resolvedQuantity) : 0
+
+                        orderMaterials[fullMaterialObject._id] = { ...fullMaterialObject, cost: cost, status: status, quantity: orderMaterials[fullMaterialObject._id].quantity + aFoundMaterial.quantity, quantityToFulfill: quantityToFulfill}
+                    }
+                })
+            }
+
+            //We handle the recipes part next
+            if(anOrderProduct.recipes && anOrderProduct.recipes.length > 0){
+                const anOrderProductRecipesIds = anOrderProduct.recipes.map(anOrderProductRecipe => {
+                    return anOrderProductRecipe.recipe
+                })
+
+                const fullRecipesObjects = await MaterialService.findMaterialsFromArrayIdsNoPagination(anOrderProductRecipesIds, req.tenantModels.recipeModel)
+
+                await Promise.all(fullRecipesObjects.map(async fullRecipeObject => {
+                    //get ingredients in this recipe and calculate cost
+
+                    if(fullRecipeObject.ingredients && fullRecipeObject.ingredients.length > 0){
+                        const ingredientsIdsArray = fullRecipeObject.ingredients.map(fullRecipeObjectIngredient => {
+                            return fullRecipeObjectIngredient.ingredient
+                        })
+
+                        //get full ingredient objects
+                        const fullIngredientObjects = await IngredientService.findIngredientsFromArrayIdsNoPagination(ingredientsIdsArray, req.tenantModels.ingredientModel)
+
+                        if(fullIngredientObjects && fullIngredientObjects.length > 0){
+                            fullIngredientObjects.map(fullIngredientObject => {
+                                const aFoundIngredient = fullRecipeObject.ingredients.find(fullRecipeObjectIngredient => fullRecipeObjectIngredient.ingredient.toString() === fullIngredientObject._id.toString())
+
+                                if(!orderIngredients[fullIngredientObject._id]){
+                                    const cost = aFoundIngredient.quantity * fullIngredientObject.price
+            
+                                    const resolvedQuantity = fullIngredientObject.quantity_in_stock - aFoundIngredient.quantity
+            
+                                    const status = resolvedQuantity < 0 ? "LOW" : "NORMAL"
+            
+                                    const quantityToFulfill = resolvedQuantity < 0 ? Math.abs(fullIngredientObject.quantity_in_stock - aFoundIngredient.quantity) : 0
+            
+                                    orderIngredients[fullIngredientObject._id] = { ...fullIngredientObject, cost: cost, status: status, quantity: aFoundIngredient.quantity, quantityToFulfill: quantityToFulfill}
+                                }
+                                else{
+                                    const cost = (aFoundIngredient.quantity * fullIngredientObject.price) + orderIngredients[fullIngredientObject._id].cost
+            
+                                    const resolvedQuantity = fullIngredientObject.quantity_in_stock - orderIngredients[fullIngredientObject._id].quantity - aFoundIngredient.quantity
+            
+                                    const status = resolvedQuantity < 0 ? "LOW" : "NORMAL"
+            
+                                    const quantityToFulfill = resolvedQuantity < 0 ? Math.abs(resolvedQuantity) : 0
+            
+                                    orderIngredients[fullIngredientObject._id] = { ...fullIngredientObject, cost: cost, status: status, quantity: orderIngredients[fullIngredientObject._id].quantity + aFoundIngredient.quantity, quantityToFulfill: quantityToFulfill}
+                                }
+                            })
+                        }
+                    }
+                }))
+            }
+
+            return true
+        }))
+
+        //At this point we have found all the materials and ingredients that are in the order and what their costs are as well as whcih ones are low and what it will take to fulfill the orders
+        
+        return res.status(200).send({response: {...order, materials: Object.values(orderMaterials), ingredients: Object.values(orderIngredients)/*, products: orderProducts*/}})
+    }
+    catch(err){
+        console.log(err)
+        return res.status(500).send({resonse: err})
+    }
 }

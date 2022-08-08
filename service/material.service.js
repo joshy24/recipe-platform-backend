@@ -22,6 +22,10 @@ module.exports.findMaterialsFromArrayIds = async(arrayIds, MaterialModel, offset
     return await MaterialModel.paginate({_id: { $in: arrayIds} }, {offset,limit})
 }
 
+module.exports.findMaterialsFromArrayIdsNoPagination = async(arrayIds, MaterialModel) => {
+    return await MaterialModel.find({_id: { $in: arrayIds} }).lean()
+}
+
 module.exports.getAllMaterials = async(MaterialModel, pagination, searchTerm, status) => {
     let query = {}
 
@@ -53,8 +57,8 @@ module.exports.getAllMaterialsToAdd = async(MaterialModel) => {
     return await MaterialModel.find({}).lean()
 }
 
-module.exports.getMaterialFromId = async(data, MaterialModel) => {
-
+module.exports.getMaterialFromId = async(id, MaterialModel) => {
+    return await MaterialModel.findOne({_id: id}).lean()
 }
 
 module.exports.getMaterialCount = async(data, MaterialModel) => {

@@ -27,6 +27,10 @@ module.exports.getProductsFromIdsArray = async (arrayOfIds, ProductModel, offset
     return await ProductModel.paginate({_id: {$in: arrayOfIds}}, {offset, limit})
 }
 
+module.exports.getProductsFromIdsArrayNoPagination = async (arrayOfIds, ProductModel) => {
+    return await ProductModel.find({_id: {$in: arrayOfIds}}).lean()
+}
+
 module.exports.getProductsNotInArray = async(data_array, ProductModel) => {
     return await ProductModel.find({_id: {$nin: data_array}}).lean()
 }
@@ -54,3 +58,12 @@ module.exports.updateProduct = async(id, new_data, ProductModel) => {
 module.exports.getProductsUsingIngredient = async(ProductModel) => {
     
 }
+
+module.exports.getProductsFromMaterialsArray = async(materialsIds, ProductModel) => {
+    return await ProductModel.find({'materials.material': { $in: materialsIds }})
+}
+
+
+module.exports.getProductsFromRecipesArray = async(recipesIds, ProductModel) => {
+    return await ProductModel.find({'recipes.recipe': { $in: recipesIds }})
+} 
