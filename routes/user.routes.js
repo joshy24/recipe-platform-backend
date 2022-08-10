@@ -3,9 +3,7 @@ const userController = require("../controller/user.controller")
 
 module.exports = function(router){
 
-    //Account
-
-    
+    //Accoun
 
     router.put("/update_account", function(req,res){
         userController.updateAccount(req,res)

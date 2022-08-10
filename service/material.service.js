@@ -6,10 +6,6 @@ module.exports.createMaterial = async(data, MaterialModel) => {
     return await material.save()
 }
 
-module.exports.upateMaterial = async(data, MaterialModel) => {
-
-}
-
 module.exports.deleteMaterial = async(id, MaterialModel) => {
     return await MaterialModel.deleteOne({_id: id})
 }

@@ -6,10 +6,6 @@ module.exports.createIngredient = async(data, IngredientModel) => {
     return await ingredient.save()
 }
 
-module.exports.upateIngredient = async(data, IngredientModel) => {
-
-}
-
 module.exports.deleteIngredient = async(id, IngredientModel) => {
     return await IngredientModel.deleteOne({_id: id})
 }

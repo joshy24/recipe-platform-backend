@@ -732,10 +732,67 @@ module.exports.getAllProducts = async(req,res) => {
     try{
         let allProducts = await ProductService.getAllProducts(req.tenantModels.productModel, { offset, limit })
 
-        return res.status(200).send({response: allProducts})
+        const updatedProducts = await Promise.all(allProducts.docs.map(async productFound => {
+            const recipesIds = productFound.recipes.map(aRecipe => {
+                return aRecipe.recipe
+            })
+
+            const productRecipes = await RecipeService.findRecipesFromArrayIdsNoPagination(recipesIds, req.tenantModels.recipeModel)
+
+            let allRecipesCost = 0
+
+            await Promise.all(productRecipes.map(async aProductRecipe => {
+                const foundRecipe = productFound.recipes.find(aRecipe => aRecipe.recipe.toString() === aProductRecipe._id.toString())
+
+                const ingredientsIds = aProductRecipe.ingredients.map(anIngredient => {
+                    return anIngredient.ingredient
+                })
+
+                const ingredientObjects = await IngredientService.findIngredientsFromArrayIdsNoPagination(ingredientsIds, req.tenantModels.ingredientModel)
+                
+                let recipeCost = 0
+
+                ingredientObjects.map(ingredientObject => {
+                    const foundIngredient = aProductRecipe.ingredients.find(anIngredient => anIngredient.ingredient.toString() === ingredientObject._id.toString())
+
+                    recipeCost += ingredientObject.price * (foundIngredient.quantity ? foundIngredient.quantity : 1)
+                })
+
+                allRecipesCost += recipeCost * (foundRecipe.quantity && foundRecipe.quantity>0 ? foundRecipe.quantity : 1)
+
+                return true;
+            }))
+
+            const productMaterialsIds = productFound.materials.map(aMaterial => {
+                return aMaterial.material;
+            })
+
+            const productMaterialObjects = await MaterialService.findMaterialsFromArrayIdsNoPagination(productMaterialsIds, req.tenantModels.materialModel)
+
+            let allMaterialsCost = 0;
+
+            await Promise.all(productMaterialObjects.map(aProductMaterial => {
+                const foundMaterial = productFound.materials.find(aMaterial => aMaterial.material.toString() === aProductMaterial._id.toString())
+
+                allMaterialsCost += (foundMaterial.quantity ? foundMaterial.quantity : 1) * aProductMaterial.price
+            }))
+
+            //console.log({allMaterialsCost, allRecipesCost, labourCost: productFound._doc.labour_cost, overheadCost: productFound._doc.overhead_cost})
+
+            let productCost = allMaterialsCost + allRecipesCost + productFound._doc.labour_cost + productFound._doc.overhead_cost
+
+            const profitCost = productFound._doc.profit_margin / 100 * productCost
+
+            const totalCost = productCost + profitCost
+            
+            return { ...productFound._doc, totalCost: totalCost }
+        }))
+
+        return res.status(200).send({response: {...allProducts, docs: updatedProducts}})
     }
     catch(err){
-
+        console.log(err)
+        return res.status(500).send({response: err})
     }
 }
 
@@ -1056,6 +1113,8 @@ module.exports.getProductRecipes = async(req,res) => {
                     
                     totalRecipeCost += fullIngredientObject.price * aFoundIngredient.quantity;
                 })
+
+                console.log(fullRecipeObject)
     
                 return {...fullRecipeObject._doc, cost: totalRecipeCost};
             }))
@@ -1247,11 +1306,67 @@ module.exports.getOrderProducts = async(req,res) => {
 
         const productsFoundArray = await ProductService.getProductsFromIdsArray(orderProductsIds, req.tenantModels.productModel, offset, limit)
         
-        const updatedOrderProducts = productsFoundArray.docs.map(productFound => {
+        const updatedOrderProducts = await Promise.all(productsFoundArray.docs.map(async productFound => {
             const foundProduct = order.products.find(aProduct => aProduct.product.toString() === productFound._id.toString())
 
-            return { ...productFound._doc, quantity: foundProduct.quantity}
-        })
+            const recipesIds = productFound.recipes.map(aRecipe => {
+                return aRecipe.recipe
+            })
+
+            const productRecipes = await RecipeService.findRecipesFromArrayIdsNoPagination(recipesIds, req.tenantModels.recipeModel)
+
+            let allRecipesCost = 0
+
+            await Promise.all(productRecipes.map(async aProductRecipe => {
+                const foundRecipe = productFound.recipes.find(aRecipe => aRecipe.recipe.toString() === aProductRecipe._id.toString())
+
+                const ingredientsIds = aProductRecipe.ingredients.map(anIngredient => {
+                    return anIngredient.ingredient
+                })
+
+                const ingredientObjects = await IngredientService.findIngredientsFromArrayIdsNoPagination(ingredientsIds, req.tenantModels.ingredientModel)
+                
+                let recipeCost = 0
+
+                ingredientObjects.map(ingredientObject => {
+                    const foundIngredient = aProductRecipe.ingredients.find(anIngredient => anIngredient.ingredient.toString() === ingredientObject._id.toString())
+
+                    recipeCost += ingredientObject.price * (foundIngredient.quantity ? foundIngredient.quantity : 1)
+                })
+
+                allRecipesCost += recipeCost * (foundRecipe.quantity && foundRecipe.quantity>0 ? foundRecipe.quantity : 1)
+
+                return true;
+            }))
+
+            const productMaterialsIds = productFound.materials.map(aMaterial => {
+                return aMaterial.material;
+            })
+
+            const productMaterialObjects = await MaterialService.findMaterialsFromArrayIdsNoPagination(productMaterialsIds, req.tenantModels.materialModel)
+
+            let allMaterialsCost = 0;
+
+            await Promise.all(productMaterialObjects.map(aProductMaterial => {
+                const foundMaterial = productFound.materials.find(aMaterial => aMaterial.material.toString() === aProductMaterial._id.toString())
+
+                allMaterialsCost += (foundMaterial.quantity ? foundMaterial.quantity : 1) * aProductMaterial.price
+            }))
+
+            //console.log({allMaterialsCost, allRecipesCost, labourCost: productFound._doc.labour_cost, overheadCost: productFound._doc.overhead_cost})
+
+            let productCost = allMaterialsCost + allRecipesCost + productFound._doc.labour_cost + productFound._doc.overhead_cost
+
+            const profitCost = productFound._doc.profit_margin / 100 * productCost
+
+            const totalCost = productFound.actual_selling_price && productFound.actual_selling_price > 0 ? productFound.actual_selling_price : (productCost + profitCost)
+            
+            const totalQuantity = (foundProduct.quantity && foundProduct.quantity > 0 ? foundProduct.quantity : 1)
+
+            const finalProductTotalCost = totalCost * totalQuantity
+
+            return { ...productFound._doc, quantity: foundProduct.quantity, totalCost: finalProductTotalCost}
+        }))
 
         return res.status(200).send({response: updatedOrderProducts})
     }
@@ -1315,19 +1430,99 @@ module.exports.editOrder = async(req,res) => {
 }
 
 module.exports.fulfillOrder = async(req,res) => {
-    const {id, name, status} = req.body;
+    const {id} = req.body;
 
-    if(!id || !name || !status){
+    if(!id){
         return res.status(400).send({response: "bad request"})
     }
 
     try{
-        const editedOrder = await OrderService.updateOrder(id,{name, status})
+        //find Order
+        const order = await OrderService.getOrder(id, req.tenantModels.orderModel)
 
-        return res.status(200).send({response: editedOrder})
+        if(order){
+            const orderProductIds = order.products.map(aProduct => {
+                return aProduct.product
+            })
+
+            //find All products in Order
+            const fullProductObjects = await ProductService.getProductsFromIdsArrayNoPagination(orderProductIds, req.tenantModels.productModel)
+
+            await Promise.all(fullProductObjects.map(async fullProductObject => {
+                //find All recipes and materials in products
+                //find All ingredients in recipes
+                //get the quantity specified for each material and ingredient for respective recipes and products
+                //update the quantity in stock for each material and ingredient
+                
+                //handle all ingredients in product first
+                if(fullProductObject.recipes.length > 0){
+                    const allProductRecipesIds = fullProductObject.recipes.map(aRecipe => {
+                        return aRecipe.recipe
+                    })
+
+                    const fullRecipeObjects = await RecipeService.findRecipesFromArrayIdsNoPagination(allProductRecipesIds, req.tenantModels.recipeModel)
+
+                    await Promise.all(fullRecipeObjects.map(async fullRecipeObjectItem => {
+                        const foundRecipe = fullProductObject.recipes.find(aRecipe => aRecipe.recipe.toString() === fullRecipeObjectItem._id.toString())
+
+                        //The quantity of the recipe
+                        const recipeQuantity = foundRecipe.quantity;
+
+                        const ingredientsIds = fullRecipeObjectItem.ingredients.map(anIngredient => {
+                            return anIngredient.ingredient
+                        })
+
+                        const fullIngredientObjects = await IngredientService.findIngredientsFromArrayIdsNoPagination(ingredientsIds, req.tenantModels.ingredientModel)
+                        
+                        await Promise.all(fullIngredientObjects.map(async fullIngredientObjectsItem => {
+                            const foundIngredient = fullRecipeObjectItem.ingredients.find(anIngredient => anIngredient.ingredient.toString() === fullIngredientObjectsItem._id.toString())
+
+                            const quantityToDeduct = foundIngredient.quantity * (recipeQuantity ? recipeQuantity : 1);
+
+                            fullIngredientObjectsItem.quantity_in_stock = Math.abs(fullIngredientObjectsItem.quantity_in_stock - quantityToDeduct);
+
+                            await IngredientService.updateIngredient(fullIngredientObjectsItem._id, fullIngredientObjectsItem, req.tenantModels.ingredientModel)
+
+                            return true;
+                        }))
+
+                    }))
+                }
+
+                //handle all materials in product next
+                if(fullProductObject.materials.length > 0){
+                    const allProductMaterialsIds = fullProductObject.materials.map(aMaterial => {
+                        return aMaterial.material
+                    })
+
+                    const fullMaterialObjects = await MaterialService.findMaterialsFromArrayIdsNoPagination(allProductMaterialsIds, req.tenantModels.materialModel)
+
+                    await Promise.all(fullMaterialObjects.map(async fullMaterialObject => {
+                        const foundMaterial = fullProductObject.materials.find(aMaterial => aMaterial.material.toString() === fullMaterialObject._id.toString())
+
+                        fullMaterialObject.quantity_in_stock = Math.abs(fullMaterialObject.quantity_in_stock - foundMaterial.quantity)
+
+                        await MaterialService.updateMaterial(fullMaterialObject._id, fullMaterialObject, req.tenantModels.materialModel)
+
+                        return true;
+                    }))
+                }
+
+                return true
+            }))
+
+            order.status = "FULFILLED"
+            
+            await OrderService.updateOrder(order._id, order, req.tenantModels.orderModel)
+
+            return res.status(200).send({response: "success"})
+        }
+
+        return res.status(404).send({response: "order not found"})    
     }
     catch(err){
-
+        console.log(err)
+        return res.status(500).send({response: err})
     }
 }
 
@@ -1370,32 +1565,20 @@ module.exports.editOrderProduct = async(req,res) => {
             return res.status(404).send({response: "order not found"})
         }
 
-        let foundProduct;
-        let index
-
-        order.products.map(aProduct,i => {
+        order.products = order.products.map(aProduct => {
             if(aProduct.product.toString() === product_id.toString()){
-                foundProduct = aProduct;
-                index = i;
+                aProduct.quantity = parseInt(quantity)
             }
+            
+            return aProduct;
         })
 
-        if(foundProduct && index){
-            foundProduct.quantity = quantity
+        await OrderService.updateOrder(id, order, req.tenantModels.orderModel)
 
-            const newOrderProducts = order.products.splice(index, 1, foundProduct)
-
-            order.products = newOrderProducts
-
-            order.save()
-
-            return res.status(200).send({response: order})
-        }
-        else{
-            return res.status(200).send({response: "bad request"})
-        }
+        return res.status(200).send({response: order})
      }
      catch(err){
+        console.log(err)
         return res.status(500).send({response: err})
      }
 }
