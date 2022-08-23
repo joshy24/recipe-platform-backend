@@ -9,6 +9,8 @@ const TenantModels = require("../modules/tenantModels.module")
 
 const { MATERIAL, INGREDIENT } = require("../modules/constants.module")
 
+const bcrypt = require("bcryptjs")
+
 const config = require('../config/config');
 
 const jwt = require("jsonwebtoken")
@@ -92,6 +94,30 @@ module.exports.signup = async(req,res) => {
     } 
 
 }
+
+module.exports.changePassword = async(req,res) => {
+    const {oldPassword, newPassword, newPasswordAgain} = req.body
+
+    if(newPasswordAgain!=newPasswordAgain){
+        return res.status(400).send({response: "bad request"})
+    }
+
+    const confirmation = await req.tenant.comparePassword(oldPassword.trim())
+
+    if(confirmation){
+        req.tenant.password = bcrypt.hashSync(newPassword, 10);
+
+        await TenantService.updateTenant(req.tenant._id, req.tenant, req.tenantModel)
+
+        req.tenant.tokens = null;
+        req.tenant.password = null;
+
+        return res.status(200).send({response: req.tenant})
+    }
+
+    return res.status(400).send({response: "wrong password"})
+}
+
 
 
 
