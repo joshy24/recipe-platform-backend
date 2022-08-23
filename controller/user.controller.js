@@ -157,16 +157,16 @@ module.exports.getAllRecipes = async(req,res) => {
         const allRecipesArray = await Promise.all(allRecipes.docs.map(async (aRecipe) => {
 
             let recipeIngredientsIdsArray = aRecipe.ingredients.map(ingredient => {
-                return ingredient.ingedient;
+                return ingredient.ingredient;
             })
     
             const fullIngredientObjects = await IngredientService.findIngredientsFromArrayIdsNoPagination(recipeIngredientsIdsArray, req.tenantModels.ingredientModel)
-    
-            const recipeIngredientsCost = 0;
+            
+            let recipeIngredientsCost = 0;
 
             fullIngredientObjects.map(fullIngredientObject => {
-                const foundIngredient = aRecipe.ingredients.find(recipeIngredient => recipeIngredient.iongredient.toString() == fullIngredientObject._id.toString())
-    
+                const foundIngredient = aRecipe.ingredients.find(recipeIngredient => recipeIngredient.ingredient.toString() == fullIngredientObject._id.toString())
+                
                 recipeIngredientsCost += (foundIngredient.quantity * fullIngredientObject.price) 
             })
 
@@ -333,7 +333,7 @@ module.exports.editRecipeIngredient = async(req,res) => {
         }
 
         const newIngredientsArray = recipe.ingredients.map(ingredient => {
-            if (ingredient.ingredient === ingredient_id) {
+            if (ingredient.ingredient.toString() === ingredient_id.toString()) {
               return {...ingredient, quantity: quantity};
             }
             return ingredient;
@@ -366,7 +366,7 @@ module.exports.deleteRecipeIngredient = async(req,res) => {
         }
 
         const newIngredientsArray = recipe.ingredients.filter(ingredient => {
-            return ingredient.ingredient != ingredient_id;
+            return ingredient.ingredient.toString() != ingredient_id.toString();
         });
 
         recipe.ingredients = []
@@ -1114,8 +1114,6 @@ module.exports.getProductRecipes = async(req,res) => {
                     totalRecipeCost += fullIngredientObject.price * aFoundIngredient.quantity;
                 })
 
-                console.log(fullRecipeObject)
-    
                 return {...fullRecipeObject._doc, cost: totalRecipeCost};
             }))
 
@@ -1598,7 +1596,7 @@ module.exports.deleteOrderProduct = async(req,res) => {
         }
 
         const newProductsArray = order.products.filter(product => {
-            return product.toString() != product_id.toString();
+            return product.product.toString() !== product_id.toString();
         });
 
         order.products = []

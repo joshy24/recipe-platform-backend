@@ -105,8 +105,8 @@ module.exports = function(router){
     });
 
 
+    
     //Recipe
-
 
     router.get("/recipe", function(req,res){
         userController.getRecipe(req,res)
@@ -125,7 +125,7 @@ module.exports = function(router){
     });
 
     router.put("/recipe/edit_ingredient", function(req,res){
-        userController.editRecipe(req,res)
+        userController.editRecipeIngredient(req,res)
     });
 
     router.delete("/recipe/delete_ingredient", function(req,res){
