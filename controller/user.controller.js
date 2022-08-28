@@ -1123,8 +1123,12 @@ module.exports.getProductRecipes = async(req,res) => {
             //for each recipe set the amount of the yield
             const arrayOfUpdatedFullRecipes = await Promise.all(arrayOfFullRecipeObjects.docs.map(async fullRecipeObject => {
                 const aFoundRecipe = product.recipes.find(recipe => recipe.recipe.toString() === fullRecipeObject._id.toString());
-    
+                
+                console.log(aFoundRecipe)
+
                 fullRecipeObject.yield.amount = aFoundRecipe.amount
+
+                console.log(fullRecipeObject)
     
                 const recipeIngredientsIdsArray = fullRecipeObject.ingredients.map(ingredientInRecipe => {
                     return ingredientInRecipe.ingredient;
