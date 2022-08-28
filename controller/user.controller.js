@@ -910,8 +910,10 @@ module.exports.addRecipesToProduct = async(req,res) => {
 
         product.recipes = [...product.recipes, ...recipes ]
 
+        console.log( product.recipes)
+
         let updatedProduct = await ProductService.updateProduct(id, product, req.tenantModels.productModel)
-    
+
         return res.status(200).send({response: updatedProduct})
     }
     catch(err){
