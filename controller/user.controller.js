@@ -897,8 +897,6 @@ module.exports.getProduct = async(req,res) => {
 module.exports.addRecipesToProduct = async(req,res) => {
     const {id, recipes} = req.body
 
-    console.log(recipes)
-
     if(!id || !recipes){
         return res.status(400).send({response: "bad request"})
     }
@@ -1125,7 +1123,7 @@ module.exports.getProductRecipes = async(req,res) => {
             //for each recipe set the amount of the yield
             const arrayOfUpdatedFullRecipes = await Promise.all(arrayOfFullRecipeObjects.docs.map(async fullRecipeObject => {
                 const aFoundRecipe = product.recipes.find(recipe => recipe.recipe.toString() === fullRecipeObject._id.toString());
-
+                console.log(aFoundRecipe)
                 fullRecipeObject.yield.amount = aFoundRecipe.amount
 
                 const recipeIngredientsIdsArray = fullRecipeObject.ingredients.map(ingredientInRecipe => {
