@@ -910,8 +910,6 @@ module.exports.addRecipesToProduct = async(req,res) => {
 
         product.recipes = [...product.recipes, ...recipes ]
 
-        console.log(product.recipes)
-
         let updatedProduct = await ProductService.updateProduct(id, product, req.tenantModels.productModel)
 
         return res.status(200).send({response: updatedProduct})
@@ -1126,7 +1124,7 @@ module.exports.getProductRecipes = async(req,res) => {
             const arrayOfUpdatedFullRecipes = await Promise.all(arrayOfFullRecipeObjects.docs.map(async fullRecipeObject => {
                 const aFoundRecipe = product.recipes.find(recipe => recipe.recipe.toString() === fullRecipeObject._id.toString());
                 
-                fullRecipeObject.yield.amount = aFoundRecipe.amount
+                fullRecipeObject.yield.amount = aFoundRecipe.quantity.amount
 
                 const recipeIngredientsIdsArray = fullRecipeObject.ingredients.map(ingredientInRecipe => {
                     return ingredientInRecipe.ingredient;
@@ -1142,7 +1140,7 @@ module.exports.getProductRecipes = async(req,res) => {
                     totalRecipeCost += fullIngredientObject.price * aFoundIngredient.quantity;
                 })
 
-                return {...fullRecipeObject._doc, cost: totalRecipeCost};
+                return {...fullRecipeObject._doc, cost: totalRecipeCost * aFoundRecipe.quantity.amount};
             }))
 
             return res.status(200).send({response: {...arrayOfFullRecipeObjects, docs: arrayOfUpdatedFullRecipes}})
