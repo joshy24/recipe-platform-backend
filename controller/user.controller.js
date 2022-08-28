@@ -908,9 +908,11 @@ module.exports.addRecipesToProduct = async(req,res) => {
             return res.status(400).send({response: "product not found"})
         }
 
-        product.recipes = [...product.recipes, ...recipes ]
+        console.log(recipes)
 
-        console.log( product.recipes)
+        console.log([...product.recipes, ...recipes ])
+
+        product.recipes = [...product.recipes, ...recipes ]
 
         let updatedProduct = await ProductService.updateProduct(id, product, req.tenantModels.productModel)
 
