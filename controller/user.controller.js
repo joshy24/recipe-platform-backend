@@ -908,11 +908,9 @@ module.exports.addRecipesToProduct = async(req,res) => {
             return res.status(400).send({response: "product not found"})
         }
 
-        console.log(recipes)
-
-        console.log([...product.recipes, ...recipes ])
-
         product.recipes = [...product.recipes, ...recipes ]
+
+        console.log(product.recipes)
 
         let updatedProduct = await ProductService.updateProduct(id, product, req.tenantModels.productModel)
 
@@ -1127,7 +1125,7 @@ module.exports.getProductRecipes = async(req,res) => {
             //for each recipe set the amount of the yield
             const arrayOfUpdatedFullRecipes = await Promise.all(arrayOfFullRecipeObjects.docs.map(async fullRecipeObject => {
                 const aFoundRecipe = product.recipes.find(recipe => recipe.recipe.toString() === fullRecipeObject._id.toString());
-                console.log(aFoundRecipe)
+                
                 fullRecipeObject.yield.amount = aFoundRecipe.amount
 
                 const recipeIngredientsIdsArray = fullRecipeObject.ingredients.map(ingredientInRecipe => {
