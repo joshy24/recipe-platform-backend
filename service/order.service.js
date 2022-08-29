@@ -14,11 +14,11 @@ module.exports.getAllOrders = async (OrderModel, pagination) => {
 }
 
 module.exports.getPendingOrdersCount = async (OrderModel, pagination) => {
-    return await OrderModel.paginate({status: "PENDING"}).estimatedDocumentCount()
+    return await OrderModel.countDocuments({status: "PENDING"})
 }
 
 module.exports.getFulfilledOrdersCount = async (OrderModel, pagination) => {
-    return await OrderModel.paginate({status: "FULFILLED"}).estimatedDocumentCount()
+    return await OrderModel.countDocuments({status: "FULFILLED"})
 }
 
 module.exports.getRecentOrders = async (OrderModel) => {
