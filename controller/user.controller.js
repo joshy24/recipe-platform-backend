@@ -135,10 +135,13 @@ module.exports.entitiesCount = async (req,res) => {
 
         const productsCount = await ProductService.getProductsCount(req.tenantModels.productModel)
 
-        const ordersCount = await OrderService.countOrders(req.tenantModels.orderModel);
+        const pendingOrdersCount = await OrderService.getPendingOrdersCount(req.tenantModels.orderModel);
 
+        const fulfilledOrdersCount = await OrderService.getFulfilledOrdersCount(req.tenantModels.orderModel);
+        
         return res.status(200).send({response: {
-            ordersCount,
+            pendingOrdersCount,
+            fulfilledOrdersCount,
             productsCount,
             recipesCount,
             inventoryCount: materialsCount + ingredientsCount

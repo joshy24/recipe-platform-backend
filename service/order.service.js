@@ -13,6 +13,14 @@ module.exports.getAllOrders = async (OrderModel, pagination) => {
     return await OrderModel.paginate({}, pagination)
 }
 
+module.exports.getPendingOrdersCount = async (OrderModel, pagination) => {
+    return await OrderModel.paginate({status: "PENDING"}).estimatedDocumentCount()
+}
+
+module.exports.getFulfilledOrdersCount = async (OrderModel, pagination) => {
+    return await OrderModel.paginate({status: "FULFILLED"}).estimatedDocumentCount()
+}
+
 module.exports.getRecentOrders = async (OrderModel) => {
     return await OrderModel.find({}).sort({ created: -1 }).limit(10)
 }
