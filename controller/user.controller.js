@@ -1761,7 +1761,7 @@ module.exports.getProfitTableProductChanges = async(req,res) => {
                           
                                  if(type.toLowerCase() == INGREDIENT || type.toLowerCase().includes(INGREDIENT)){
                                      if(changeListIds[0].toString() === allIngredientObject._id.toString()){
-                                        cost_diff_found = Object.values(aChangeList)[0] - allIngredientObject.price
+                                        cost_diff_found = (Object.values(aChangeList)[0] * aFoundIngredient.quantity) - (allIngredientObject.price * aFoundIngredient.quantity)
                                      }
                                  }
 
@@ -1793,7 +1793,7 @@ module.exports.getProfitTableProductChanges = async(req,res) => {
 
                         if(type.toLowerCase() == MATERIAL || type.toLowerCase().includes(MATERIAL)){
                             if(changeListIds[0].toString() === aProductMaterial._id.toString()){
-                               cost_diff_found = Object.values(aChangeList)[0] - aProductMaterial.price
+                               cost_diff_found = (aFoundMaterial.quantity * Object.values(aChangeList)[0]) - (aFoundMaterial.quantity * aProductMaterial.price)
                             }
                         }
 
