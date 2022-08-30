@@ -1696,6 +1696,8 @@ module.exports.getProfitTableProductChanges = async(req,res) => {
     try{
         const aChangeList = JSON.parse(changeList)
 
+        const cost_diff_found = 0;
+
         const changeListIds = Object.keys(aChangeList)
 
         const newListOfMongooseIds = changeListIds.map(changeListItem => {
@@ -1757,6 +1759,12 @@ module.exports.getProfitTableProductChanges = async(req,res) => {
                             const allIngredientsCost = allIngredientObjects.reduce( (acc, allIngredientObject) => {
                                  const aFoundIngredient = allProductRecipe.ingredients.find(anIngredient => anIngredient.ingredient.toString() === allIngredientObject._id.toString())
                           
+                                 if(type.toLowerCase() == INGREDIENT || type.toLowerCase().includes(INGREDIENT)){
+                                     if(changeListIds[0].toString() === allIngredientObject._id.toString()){
+                                        cost_diff_found = Object.values(aChangeList)[0] - allIngredientObject.rice
+                                     }
+                                 }
+
                                  return acc + (allIngredientObject.price * aFoundIngredient.quantity)
                             },0)
                         
@@ -1783,6 +1791,12 @@ module.exports.getProfitTableProductChanges = async(req,res) => {
                     costOfMaterials = allProductMaterials.reduce( (acc, aProductMaterial) => {
                         const aFoundMaterial = aProduct.materials.find(aMaterial => aMaterial.material.toString() == aProductMaterial._id.toString())
 
+                        if(type.toLowerCase() == MATERIAL || type.toLowerCase().includes(MATERIAL)){
+                            if(changeListIds[0].toString() === aProductMaterial._id.toString()){
+                               cost_diff_found = Object.values(aChangeList)[0] - aProductMaterial.Price
+                            }
+                        }
+
                         return acc+(aFoundMaterial.quantity * aProductMaterial.price)
                     }, 0)
                 }
@@ -1791,11 +1805,11 @@ module.exports.getProfitTableProductChanges = async(req,res) => {
 
                 const totalCostWithProfitMargin = (aProduct.profit_margin / 100 * totalCostWithoutProfitMargin) + totalCostWithoutProfitMargin
 
-                const totalCostWithIncrease = totalCostWithoutProfitMargin + Object.values(aChangeList)[0]
+                const totalCostWithIncrease = totalCostWithoutProfitMargin + cost_diff_found
 
                 const newProposedCostPriceWithIncreaseAndProfitMargin = (aProduct.profit_margin / 100 * totalCostWithIncrease) + totalCostWithIncrease
 
-                return {...aProduct._doc, change: Object.values(aChangeList)[0], totalCostWithoutProfitMargin:totalCostWithoutProfitMargin, totalCostWithProfitMargin:totalCostWithProfitMargin, totalCostWithIncrease:totalCostWithIncrease, newProposedCostPriceWithIncreaseAndProfitMargin:newProposedCostPriceWithIncreaseAndProfitMargin}
+                return {...aProduct._doc, change: cost_diff_found, totalCostWithoutProfitMargin:totalCostWithoutProfitMargin, totalCostWithProfitMargin:totalCostWithProfitMargin, totalCostWithIncrease:totalCostWithIncrease, newProposedCostPriceWithIncreaseAndProfitMargin:newProposedCostPriceWithIncreaseAndProfitMargin}
             }))
 
             return res.status(200).send({response: updatedProducts})
