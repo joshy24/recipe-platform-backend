@@ -1696,7 +1696,7 @@ module.exports.getProfitTableProductChanges = async(req,res) => {
     try{
         const aChangeList = JSON.parse(changeList)
 
-        const cost_diff_found = 0;
+        let cost_diff_found = 0;
 
         const changeListIds = Object.keys(aChangeList)
 
