@@ -1836,13 +1836,13 @@ module.exports.applyProfitTableChanges = async(req,res) => {
 
     try{
         if(type.toLowerCase() == MATERIAL || type.toLowerCase().includes(MATERIAL)){
-            const material = await MaterialService.updateMaterial(id, {purchase_quantity: change}, req.tenantModels.materialModel)
+            const material = await MaterialService.updateMaterial(id, {price: change}, req.tenantModels.materialModel)
 
             return res.status(200).send({response: material})
         }
 
         if(type.toLowerCase() == INGREDIENT || type.toLowerCase().includes(INGREDIENT)){
-            const ingredient = await IngredientService.updateIngredient(id, {purchase_quantity: change}, req.tenantModels.ingredientModel)
+            const ingredient = await IngredientService.updateIngredient(id, {price: change}, req.tenantModels.ingredientModel)
 
             return res.status(200).send({response: ingredient})
         }
