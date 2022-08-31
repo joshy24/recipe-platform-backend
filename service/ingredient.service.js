@@ -58,10 +58,10 @@ module.exports.getIngredientsNotInArray = async(data_array, IngredientModel) => 
 
 module.exports.getIngredientsNotInArray = async(data_array, offset, limit, name, IngredientModel) => {
 
-    const query = {
+    let query = {
         _id: {$nin: data_array}
     }
-    
+
     if(!!name){
         query = {...query, $text: { $search: name }}
     }
