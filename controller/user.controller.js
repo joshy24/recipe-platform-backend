@@ -636,7 +636,7 @@ module.exports.editInventoryMaterial = async(req,res) => {
 }
 
 module.exports.getIngredientsToAdd = async(req,res) => {
-    const { recipe_id } = req.query
+    const { recipe_id, search_term, offset, limit } = req.query
 
     if(!recipe_id){
         return res.status(400).send({response: "bad request"})
@@ -653,7 +653,13 @@ module.exports.getIngredientsToAdd = async(req,res) => {
             const recipe_ingredients_ids = recipe.ingredients.map(ingredient => {
                 return ingredient.ingredient
             })
-    
+            
+            if(offset && limit){
+                const ingredients_found = await IngredientService.getIngredientsNotInArray(recipe_ingredients_ids, offset, limit, search_term, req.tenantModels.ingredientModel)
+                
+                return res.status(200).send({response: ingredients_found._doc})
+            }
+
             const ingredients_found = await IngredientService.getIngredientsNotInArray(recipe_ingredients_ids, req.tenantModels.ingredientModel)
         
             return res.status(200).send({response: ingredients_found})
@@ -1838,19 +1844,16 @@ module.exports.applyProfitTableChanges = async(req,res) => {
         if(type.toLowerCase() == MATERIAL || type.toLowerCase().includes(MATERIAL)){
             const material = await MaterialService.updateMaterial(id, {price: change}, req.tenantModels.materialModel)
 
-            console.log(material)
-
             return res.status(200).send({response: material})
         }
 
         if(type.toLowerCase() == INGREDIENT || type.toLowerCase().includes(INGREDIENT)){
             const ingredient = await IngredientService.updateIngredient(id, {price: change}, req.tenantModels.ingredientModel)
-            console.log(ingredient)
+            
             return res.status(200).send({response: ingredient})
         }
     }
     catch(err){
-        console.log(err)
         return res.status(500).send({response: err})
     }
 }
