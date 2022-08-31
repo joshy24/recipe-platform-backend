@@ -638,6 +638,8 @@ module.exports.editInventoryMaterial = async(req,res) => {
 module.exports.getIngredientsToAdd = async(req,res) => {
     const { recipe_id, search_term, offset, limit } = req.query
 
+    console.log(search_term, offset, limit)
+
     if(!recipe_id){
         return res.status(400).send({response: "bad request"})
     }
