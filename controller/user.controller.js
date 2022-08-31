@@ -655,7 +655,7 @@ module.exports.getIngredientsToAdd = async(req,res) => {
             })
             
             if(offset && limit){
-                const ingredients_found = await IngredientService.getIngredientsNotInArray(recipe_ingredients_ids, offset, limit, search_term, req.tenantModels.ingredientModel)
+                const ingredients_found = await IngredientService.getIngredientsNotInArray(recipe_ingredients_ids, offset, limit, req.tenantModels.ingredientModel, search_term,)
                 
                 return res.status(200).send({response: ingredients_found._doc})
             }

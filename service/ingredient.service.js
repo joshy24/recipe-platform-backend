@@ -56,7 +56,7 @@ module.exports.getIngredientsNotInArray = async(data_array, IngredientModel) => 
     return await IngredientModel.find({_id: {$nin: data_array}}).lean()
 }
 
-module.exports.getIngredientsNotInArray = async(data_array, offset, limit, name, IngredientModel) => {
+module.exports.getIngredientsNotInArray = async(data_array, offset, limit, IngredientModel, name) => {
 
     let query = {
         _id: {$nin: data_array}
