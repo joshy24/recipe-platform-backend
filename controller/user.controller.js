@@ -618,9 +618,6 @@ module.exports.editInventoryIngredient = async(req,res) => {
         return res.status(400).send({response: "bad request"})
     }
 
-    new_ingredient.purchase_quantity.amount = new_ingredient.purchase_quantity
-    new_ingredient.purchase_quantity.unit = new_ingredient.purchase_size
-
     try{
         let updatedIngredient = await IngredientService.updateIngredient(new_ingredient._id, new_ingredient, req.tenantModels.ingredientModel)
     

@@ -77,6 +77,12 @@ module.exports.getIngredientCount = async(data, IngredientModel) => {
 module.exports.updateIngredient = async(id, data, IngredientModel) => {
     const ingredient = await IngredientModel.findOne({_id:id})
 
+    if(!!data.purchase_quantity)
+        ingredient.purchase_quantity.amount = data.purchase_quantity
+
+    if(!!data.purchase_size)
+        ingredient.purchase_quantity.unit = data.purchase_size
+
     if(ingredient){
         ingredient.set(data);
 
