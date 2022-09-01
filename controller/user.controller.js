@@ -474,7 +474,7 @@ module.exports.getInventory = async(req,res) => {
             
             const editedList = getQuantityInStockForInventoryList(allIngredients.docs)
 
-            return res.status(200).send({response: {...editedList, docs: editedList}})
+            return res.status(200).send({response: {...allIngredients, docs: editedList}})
         }
         
         if(type.toLowerCase() == "materials" || type.toLowerCase() == "material"){
@@ -482,7 +482,7 @@ module.exports.getInventory = async(req,res) => {
             
             const editedList = getQuantityInStockForInventoryList(allMaterials.docs)
 
-            return res.status(200).send({response: {...editedList, docs: editedList}})
+            return res.status(200).send({response: {...allMaterials, docs: editedList}})
         }
     }
     catch(err){
