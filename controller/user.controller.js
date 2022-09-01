@@ -602,6 +602,9 @@ module.exports.editInventoryIngredient = async(req,res) => {
 
     const new_ingredient = JSON.parse(ingredient)
 
+    new_ingredient.purchase_quantity.amount = new_ingredient.purchase_quantity
+    new_ingredient.purchase_quantity.unit = new_ingredient.purchase_size
+
     if(!new_ingredient){
         return res.status(400).send({response: "bad request"})
     }
@@ -621,6 +624,9 @@ module.exports.editInventoryMaterial = async(req,res) => {
     const {material} = req.query
 
     const new_material = JSON.parse(material)
+
+    new_material.purchase_quantity.amount = new_material.purchase_quantity
+    new_material.purchase_quantity.unit = new_material.purchase_size
 
     if(!new_material){
         return res.status(400).send({response: "bad request"})
