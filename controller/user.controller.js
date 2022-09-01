@@ -471,7 +471,7 @@ module.exports.getInventory = async(req,res) => {
     try{
         if(type.toLowerCase() == "ingredients" || type.toLowerCase() == "ingredient"){
             let allIngredients = await IngredientService.getAllIngredients(req.tenantModels.ingredientModel, {limit, offset}, searchTerm, status)
-            
+            console.log(allIngredients)
             const editedList = getQuantityInStockForInventoryList(allIngredients.docs)
 
             return res.status(200).send({response: {...allIngredients, docs: editedList}})
@@ -479,7 +479,7 @@ module.exports.getInventory = async(req,res) => {
         
         if(type.toLowerCase() == "materials" || type.toLowerCase() == "material"){
             let allMaterials = await MaterialService.getAllMaterials(req.tenantModels.materialModel, {limit, offset}, searchTerm,  status)
-            
+            console.log(allMaterials)
             const editedList = getQuantityInStockForInventoryList(allMaterials.docs)
 
             return res.status(200).send({response: {...allMaterials, docs: editedList}})
