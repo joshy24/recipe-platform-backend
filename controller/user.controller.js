@@ -472,17 +472,17 @@ module.exports.getInventory = async(req,res) => {
         if(type.toLowerCase() == "ingredients" || type.toLowerCase() == "ingredient"){
             let allIngredients = await IngredientService.getAllIngredients(req.tenantModels.ingredientModel, {limit, offset}, searchTerm, status)
             
-            const editedList = getQuantityInStockForInventoryList(allIngredients)
+            const editedList = getQuantityInStockForInventoryList(allIngredients.docs)
 
-            return res.status(200).send({response: editedList})
+            return res.status(200).send({response: {...editedList, docs: editedList}})
         }
         
         if(type.toLowerCase() == "materials" || type.toLowerCase() == "material"){
             let allMaterials = await MaterialService.getAllMaterials(req.tenantModels.materialModel, {limit, offset}, searchTerm,  status)
             
-            const editedList = getQuantityInStockForInventoryList(allMaterials)
+            const editedList = getQuantityInStockForInventoryList(allMaterials.docs)
 
-            return res.status(200).send({response: editedList})
+            return res.status(200).send({response: {...editedList, docs: editedList}})
         }
     }
     catch(err){
@@ -654,8 +654,6 @@ module.exports.editInventoryMaterial = async(req,res) => {
 
 module.exports.getIngredientsToAdd = async(req,res) => {
     const { recipe_id, search_term, offset, limit } = req.query
-
-    console.log(search_term, offset, limit)
 
     if(!recipe_id){
         return res.status(400).send({response: "bad request"})
