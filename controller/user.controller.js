@@ -1914,8 +1914,6 @@ module.exports.getOrderShoppingList = async (req,res) => {
                     const aFoundMaterial = anOrderProduct.materials.find(anOrderProductMaterial => anOrderProductMaterial.material.toString() === fullMaterialObject._id.toString())
 
                     if(!orderMaterials[fullMaterialObject._id]){
-                        const cost = aFoundMaterial.quantity * fullMaterialObject.price
-
                         const cost = getPriceOfQuantity(fullMaterialObject.price, fullMaterialObject.purchase_quantity.amount, aFoundMaterial.quantity)
 
                         const resolvedQuantity = fullMaterialObject.quantity_in_stock - aFoundMaterial.quantity
