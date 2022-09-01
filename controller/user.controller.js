@@ -632,6 +632,8 @@ module.exports.editInventoryMaterial = async(req,res) => {
     new_material.purchase_quantity.amount = new_material.purchase_quantity
     new_material.purchase_quantity.unit = new_material.purchase_size
 
+    console.log(new_material)
+
     try{
         let updatedMaterial = await MaterialService.updateMaterial(new_material._id, new_material, req.tenantModels.materialModel)
     
