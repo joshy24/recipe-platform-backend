@@ -64,6 +64,12 @@ module.exports.getMaterialCount = async(data, MaterialModel) => {
 module.exports.updateMaterial = async(id, data, MaterialModel) => {
     const material = await MaterialModel.findOne({_id:id})
 
+    if(!!data.purchase_quantity)
+         material.purchase_quantity.amount = data.purchase_quantity
+
+    if(!!data.purchase_size)
+         material.purchase_quantity.unit = data.purchase_size
+
     if(material){
         material.set(data);
 
