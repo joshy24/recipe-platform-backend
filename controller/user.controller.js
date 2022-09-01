@@ -472,13 +472,17 @@ module.exports.getInventory = async(req,res) => {
         if(type.toLowerCase() == "ingredients" || type.toLowerCase() == "ingredient"){
             let allIngredients = await IngredientService.getAllIngredients(req.tenantModels.ingredientModel, {limit, offset}, searchTerm, status)
             
-            return res.status(200).send({response: allIngredients})
+            const editedList = getQuantityInStockForInventoryList(allIngredients)
+
+            return res.status(200).send({response: editedList})
         }
         
         if(type.toLowerCase() == "materials" || type.toLowerCase() == "material"){
             let allMaterials = await MaterialService.getAllMaterials(req.tenantModels.materialModel, {limit, offset}, searchTerm,  status)
             
-            return res.status(200).send({response: allMaterials})
+            const editedList = getQuantityInStockForInventoryList(allMaterials)
+
+            return res.status(200).send({response: editedList})
         }
     }
     catch(err){
@@ -505,11 +509,19 @@ module.exports.searchInventory = async(req,res) => {
             results = await MaterialService.getMaterialsSearch(searchTerm, req.tenantModels.materialModel, pagination)
         }
 
-        return res.status(200).send({response: results})
+        const editedList = getQuantityInStockForInventoryList(results)
+
+        return res.status(200).send({response: editedList})
     }
     catch(err){
         return res.status(500).send({response: err})
     }
+}
+
+const getQuantityInStockForInventoryList = (inventoryItems) => {
+    return inventoryItems.map(inventoryItem => {
+        return {...inventoryItem, costOfQuantityInStock: getPriceOfQuantity(inventoryItem.price, inventoryItem.purchase_quantity.amount, inventoryItem.quantity_in_stock)}
+    })
 }
 
 module.exports.exportInventory = (req,res) => {
