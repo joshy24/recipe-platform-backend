@@ -473,7 +473,7 @@ module.exports.getInventory = async(req,res) => {
             let allIngredients = await IngredientService.getAllIngredients(req.tenantModels.ingredientModel, {limit, offset}, searchTerm, status)
             
             const editedList = getQuantityInStockForInventoryList(allIngredients.docs)
-            
+            console.log({...allIngredients, docs: editedList._doc})
             return res.status(200).send({response: {...allIngredients, docs: editedList._doc}})
         }
         
@@ -481,7 +481,7 @@ module.exports.getInventory = async(req,res) => {
             let allMaterials = await MaterialService.getAllMaterials(req.tenantModels.materialModel, {limit, offset}, searchTerm,  status)
             
             const editedList = getQuantityInStockForInventoryList(allMaterials.docs)
-            
+            console.log({...allMaterials, docs: editedList._doc})
             return res.status(200).send({response: {...allMaterials, docs: editedList._doc}})
         }
     }
