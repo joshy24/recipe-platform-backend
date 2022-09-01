@@ -9,6 +9,8 @@ const TenantModels = require("../modules/tenantModels.module")
 
 const { MATERIAL, INGREDIENT } = require("../modules/constants.module")
 
+const { getPriceOfQuantity } = require("../modules/utils")
+
 const bcrypt = require("bcryptjs")
 
 const config = require('../config/config');
@@ -196,7 +198,7 @@ module.exports.getAllRecipes = async(req,res) => {
             fullIngredientObjects.map(fullIngredientObject => {
                 const foundIngredient = aRecipe.ingredients.find(recipeIngredient => recipeIngredient.ingredient.toString() == fullIngredientObject._id.toString())
                 
-                recipeIngredientsCost += (foundIngredient.quantity * fullIngredientObject.price) 
+                recipeIngredientsCost += getPriceOfQuantity(fullIngredientObject.price, fullIngredientObject.purchase_quantity.amount, fullIngredientObject.quantity)
             })
 
             const newRecipeObject = {...aRecipe._doc, totalCost: recipeIngredientsCost}
@@ -239,7 +241,7 @@ module.exports.searchRecipes = async(req,res) => {
             fullIngredientObjects.map(fullIngredientObject => {
                 const foundIngredient = aRecipe.ingredients.find(recipeIngredient => recipeIngredient.iongredient.toString() == fullIngredientObject._id.toString())
     
-                recipeIngredientsCost += (foundIngredient.quantity * fullIngredientObject.price) 
+                recipeIngredientsCost += getPriceOfQuantity(fullIngredientObject.price, fullIngredientObject.purchase_quantity.amount, foundIngredient.quantity)
             })
 
             const newRecipeObject = {...aRecipe._doc, totalCost: recipeIngredientsCost}
@@ -437,7 +439,7 @@ module.exports.getRecipeIngredients = async(req,res) => {
         const recipeIngredients = fullIngredientObjects.docs.map(fullIngredientObject => {
             const foundIngredient = recipe.ingredients.find(recipeIngredient => recipeIngredient.ingredient.toString() == fullIngredientObject._id.toString())
 
-            return {...fullIngredientObject._doc, quantity: foundIngredient.quantity, totalCost: foundIngredient.quantity*fullIngredientObject.price}
+            return {...fullIngredientObject._doc, quantity: foundIngredient.quantity, totalCost: getPriceOfQuantity(fullIngredientObject.price, fullIngredientObject.purchase_quantity.amount, foundIngredient.quantity)}
         })
 
         return res.status(200).send({response: recipeIngredients})
@@ -549,7 +551,7 @@ module.exports.deleteInventoryMaterial = async(req,res) => {
 }
 
 module.exports.addIngredientsToInventory = async (req,res) => {
-    //This should be multiple i gredients but will work with one for now till we figure it out
+    //This should be multiple igredients but will work with one for now till we figure it out
     const {ingredient} = req.body
     
     if(!ingredient){
@@ -792,7 +794,7 @@ module.exports.getAllProducts = async(req,res) => {
                 ingredientObjects.map(ingredientObject => {
                     const foundIngredient = aProductRecipe.ingredients.find(anIngredient => anIngredient.ingredient.toString() === ingredientObject._id.toString())
 
-                    recipeCost += ingredientObject.price * (foundIngredient.quantity ? foundIngredient.quantity : 1)
+                    recipeCost += getPriceOfQuantity(ingredientObject.price, ingredientObject.purchase_quantity.amount, (foundIngredient.quantity ? foundIngredient.quantity : 1));
                 })
 
                 allRecipesCost += recipeCost * (foundRecipe.quantity && foundRecipe.quantity>0 ? foundRecipe.quantity : 1)
@@ -811,10 +813,8 @@ module.exports.getAllProducts = async(req,res) => {
             await Promise.all(productMaterialObjects.map(aProductMaterial => {
                 const foundMaterial = productFound.materials.find(aMaterial => aMaterial.material.toString() === aProductMaterial._id.toString())
 
-                allMaterialsCost += (foundMaterial.quantity ? foundMaterial.quantity : 1) * aProductMaterial.price
+                allMaterialsCost += getPriceOfQuantity(aProductMaterial.price, aProductMaterial.purchase_quantity.amount, (foundMaterial.quantity ? foundMaterial.quantity : 1));
             }))
-
-            //console.log({allMaterialsCost, allRecipesCost, labourCost: productFound._doc.labour_cost, overheadCost: productFound._doc.overhead_cost})
 
             let productCost = allMaterialsCost + allRecipesCost + productFound._doc.labour_cost + productFound._doc.overhead_cost
 
@@ -1148,7 +1148,7 @@ module.exports.getProductRecipes = async(req,res) => {
                 fullIngredientsObjects.docs.map(fullIngredientObject => {
                     const aFoundIngredient = fullRecipeObject.ingredients.find(ingredient => ingredient.ingredient.toString() === fullIngredientObject._id.toString());
                     
-                    totalRecipeCost += fullIngredientObject.price * aFoundIngredient.quantity;
+                    totalRecipeCost += getPriceOfQuantity(fullIngredientObject.price, fullIngredientObject.purchase_quantity.amount, aFoundIngredient.quantity)
                 })
 
                 return {...fullRecipeObject._doc, cost: totalRecipeCost * aFoundRecipe.quantity.amount};
@@ -1198,7 +1198,7 @@ module.exports.getProductMaterials = async(req,res) => {
             const arrayOfUpdatedFullMaterials = arrayOfFullMaterialObjects.docs.map(fullMaterialObject => {
                 const aFoundMaterial = product.materials.find(material => material.material.toString() === fullMaterialObject._id.toString());
 
-                return {...fullMaterialObject._doc, quantity: aFoundMaterial.quantity, totalCost: aFoundMaterial.quantity*fullMaterialObject.price}
+                return {...fullMaterialObject._doc, quantity: aFoundMaterial.quantity, totalCost: getPriceOfQuantity(fullMaterialObject.price, fullMaterialObject.purchase_quantity.amount, aFoundMaterial.quantity)}
             })
 
             return res.status(200).send({response: {...arrayOfFullMaterialObjects, docs: arrayOfUpdatedFullMaterials}})
@@ -1315,6 +1315,7 @@ module.exports.searchOrders = async(req,res) => {
 }
 
 
+
 //Order
 
 module.exports.getOrderProducts = async(req,res) => {
@@ -1366,7 +1367,7 @@ module.exports.getOrderProducts = async(req,res) => {
                 ingredientObjects.map(ingredientObject => {
                     const foundIngredient = aProductRecipe.ingredients.find(anIngredient => anIngredient.ingredient.toString() === ingredientObject._id.toString())
 
-                    recipeCost += ingredientObject.price * (foundIngredient.quantity ? foundIngredient.quantity : 1)
+                    recipeCost += getPriceOfQuantity(ingredientObject.price, ingredientObject.purchase_quantity.amount, (foundIngredient.quantity ? foundIngredient.quantity : 1)) 
                 })
 
                 allRecipesCost += recipeCost * (foundRecipe.quantity && foundRecipe.quantity>0 ? foundRecipe.quantity : 1)
@@ -1385,7 +1386,7 @@ module.exports.getOrderProducts = async(req,res) => {
             await Promise.all(productMaterialObjects.map(aProductMaterial => {
                 const foundMaterial = productFound.materials.find(aMaterial => aMaterial.material.toString() === aProductMaterial._id.toString())
 
-                allMaterialsCost += (foundMaterial.quantity ? foundMaterial.quantity : 1) * aProductMaterial.price
+                allMaterialsCost += getPriceOfQuantity(aProductMaterial.price, aProductMaterial.purchase_quantity.amount, (foundMaterial.quantity ? foundMaterial.quantity : 1))
             }))
 
             //console.log({allMaterialsCost, allRecipesCost, labourCost: productFound._doc.labour_cost, overheadCost: productFound._doc.overhead_cost})
@@ -1915,6 +1916,8 @@ module.exports.getOrderShoppingList = async (req,res) => {
                     if(!orderMaterials[fullMaterialObject._id]){
                         const cost = aFoundMaterial.quantity * fullMaterialObject.price
 
+                        const cost = getPriceOfQuantity(fullMaterialObject.price, fullMaterialObject.purchase_quantity.amount, aFoundMaterial.quantity)
+
                         const resolvedQuantity = fullMaterialObject.quantity_in_stock - aFoundMaterial.quantity
 
                         const status = resolvedQuantity < 0 ? "LOW" : "NORMAL"
@@ -1924,7 +1927,7 @@ module.exports.getOrderShoppingList = async (req,res) => {
                         orderMaterials[fullMaterialObject._id] = { ...fullMaterialObject, cost: cost, status: status, quantity: aFoundMaterial.quantity, quantityToFulfill: quantityToFulfill}
                     }
                     else{
-                        const cost = (aFoundMaterial.quantity * fullMaterialObject.price) + orderMaterials[fullMaterialObject._id].cost
+                        const cost = getPriceOfQuantity(fullMaterialObject.price, fullMaterialObject.purchase_quantity.amount, aFoundMaterial.quantity) + orderMaterials[fullMaterialObject._id].cost
 
                         const resolvedQuantity = fullMaterialObject.quantity_in_stock - orderMaterials[fullMaterialObject._id].quantity - aFoundMaterial.quantity
 
@@ -1961,7 +1964,8 @@ module.exports.getOrderShoppingList = async (req,res) => {
                                 const aFoundIngredient = fullRecipeObject.ingredients.find(fullRecipeObjectIngredient => fullRecipeObjectIngredient.ingredient.toString() === fullIngredientObject._id.toString())
 
                                 if(!orderIngredients[fullIngredientObject._id]){
-                                    const cost = aFoundIngredient.quantity * fullIngredientObject.price
+                                    
+                                    const cost = getPriceOfQuantity(fullIngredientObject.price, fullIngredientObject.purchase_quantity.amount, aFoundIngredient.quantity)
             
                                     const resolvedQuantity = fullIngredientObject.quantity_in_stock - aFoundIngredient.quantity
             
@@ -1972,7 +1976,7 @@ module.exports.getOrderShoppingList = async (req,res) => {
                                     orderIngredients[fullIngredientObject._id] = { ...fullIngredientObject, cost: cost, status: status, quantity: aFoundIngredient.quantity, quantityToFulfill: quantityToFulfill}
                                 }
                                 else{
-                                    const cost = (aFoundIngredient.quantity * fullIngredientObject.price) + orderIngredients[fullIngredientObject._id].cost
+                                    const cost = getPriceOfQuantity(fullIngredientObject.price, fullIngredientObject.purchase_quantity.amount, aFoundIngredient.quantity) + orderIngredients[fullIngredientObject._id].cost
             
                                     const resolvedQuantity = fullIngredientObject.quantity_in_stock - orderIngredients[fullIngredientObject._id].quantity - aFoundIngredient.quantity
             

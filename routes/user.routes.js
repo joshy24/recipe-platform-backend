@@ -250,14 +250,6 @@ module.exports = function(router){
         userController.exportInventory(req,res)
     });
 
-    router.get("/inventory/ingredients_to_add", function(req,res){
-        userController.getIngredientsToAdd(req,res)
-    });
-
-    router.get("/inventory/materials_to_add", function(req,res){
-        userController.getMaterialsToAdd(req,res)
-    });
-
     router.delete("/inventory/delete_ingredient", function(req,res){
         userController.deleteInventoryIngredient(req,res)
     });
@@ -288,7 +280,7 @@ module.exports = function(router){
 
     router.get("/inventory/materials_to_add", function(req,res){
         userController.getMaterialsToAdd(req,res)
-    })
+    });
 
     router.get("/inventory/recipes_to_add", function(req,res){
         userController.getRecipesToAdd(req,res)
