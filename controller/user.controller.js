@@ -1159,6 +1159,8 @@ module.exports.getProductRecipes = async(req,res) => {
                     const aFoundIngredient = fullRecipeObject.ingredients.find(ingredient => ingredient.ingredient.toString() === fullIngredientObject._id.toString());
                     
                     totalRecipeCost += getPriceOfQuantity(fullIngredientObject.price, fullIngredientObject.purchase_quantity.amount, aFoundIngredient.quantity)
+
+                    totalRecipeCostconsole.log(totalRecipeCost)
                 })
 
                 return {...fullRecipeObject._doc, cost: totalRecipeCost * aFoundRecipe.quantity.amount};
