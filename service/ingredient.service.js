@@ -56,7 +56,7 @@ module.exports.getIngredientsNotInArray = async(data_array, IngredientModel) => 
     return await IngredientModel.find({_id: {$nin: data_array}}).lean()
 }
 
-module.exports.getIngredientsNotInArray = async(data_array, offset, limit, IngredientModel, name) => {
+module.exports.getIngredientsNotInArrayWithSearchTerm = async(data_array, offset, limit, IngredientModel, name) => {
     console.log(data_array, offset, limit, IngredientModel, name)
     
     let query = {
@@ -66,6 +66,8 @@ module.exports.getIngredientsNotInArray = async(data_array, offset, limit, Ingre
     if(!!name){
         query = {...query, $text: { $search: name }}
     }
+
+    console.log({query})
 
     return await IngredientModel.paginate(query, {offset,limit})
 }
