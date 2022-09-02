@@ -1145,6 +1145,8 @@ module.exports.getProductRecipes = async(req,res) => {
             const arrayOfUpdatedFullRecipes = await Promise.all(arrayOfFullRecipeObjects.docs.map(async fullRecipeObject => {
                 const aFoundRecipe = product.recipes.find(recipe => recipe.recipe.toString() === fullRecipeObject._id.toString());
                 
+                console.log({aFoundRecipe})
+
                 fullRecipeObject.yield.amount = aFoundRecipe.quantity.amount
 
                 const recipeIngredientsIdsArray = fullRecipeObject.ingredients.map(ingredientInRecipe => {
@@ -1159,8 +1161,6 @@ module.exports.getProductRecipes = async(req,res) => {
                     const aFoundIngredient = fullRecipeObject.ingredients.find(ingredient => ingredient.ingredient.toString() === fullIngredientObject._id.toString());
                     
                     totalRecipeCost += getPriceOfQuantity(fullIngredientObject.price, fullIngredientObject.purchase_quantity.amount, aFoundIngredient.quantity)
-
-                    console.log(totalRecipeCost)
                 })
 
                 return {...fullRecipeObject._doc, cost: totalRecipeCost * aFoundRecipe.quantity.amount};
