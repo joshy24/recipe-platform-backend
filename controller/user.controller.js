@@ -669,9 +669,10 @@ module.exports.getIngredientsToAdd = async(req,res) => {
             })
             
             if(offset && limit){
-                console.log("Search with offset and limit")
                 const ingredients_found = await IngredientService.getIngredientsNotInArrayWithSearchTerm(recipe_ingredients_ids, offset, limit, req.tenantModels.ingredientModel, search_term)
                 
+                consoloe.log(ingredients_found)
+
                 return res.status(200).send({response: ingredients_found._doc})
             }
 
