@@ -198,7 +198,7 @@ module.exports.getAllRecipes = async(req,res) => {
             fullIngredientObjects.map(fullIngredientObject => {
                 const foundIngredient = aRecipe.ingredients.find(recipeIngredient => recipeIngredient.ingredient.toString() == fullIngredientObject._id.toString())
                 
-                recipeIngredientsCost += getPriceOfQuantity(fullIngredientObject.price, fullIngredientObject.purchase_quantity.amount, fullIngredientObject.quantity)
+                recipeIngredientsCost += getPriceOfQuantity(fullIngredientObject.price, fullIngredientObject.purchase_quantity.amount, foundIngredient.quantity)
             })
 
             const newRecipeObject = {...aRecipe._doc, totalCost: recipeIngredientsCost}
