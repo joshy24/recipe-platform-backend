@@ -999,7 +999,7 @@ module.exports.editProductRecipe = async(req,res) => {
         }
 
         const newRecipesArray = product.recipes.map(recipe => {
-            if (recipe.recipe === recipe_id) {
+            if (recipe.recipe.toString() === recipe_id.toString()) {
                 return {...recipe, quantity: quantity};
             }
             return recipe;
@@ -1144,8 +1144,6 @@ module.exports.getProductRecipes = async(req,res) => {
             //for each recipe set the amount of the yield
             const arrayOfUpdatedFullRecipes = await Promise.all(arrayOfFullRecipeObjects.docs.map(async fullRecipeObject => {
                 const aFoundRecipe = product.recipes.find(recipe => recipe.recipe.toString() === fullRecipeObject._id.toString());
-                
-                console.log({aFoundRecipe})
 
                 fullRecipeObject.yield.amount = aFoundRecipe.quantity.amount
 
