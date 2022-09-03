@@ -1073,11 +1073,11 @@ module.exports.editProductMaterial = async(req,res) => {
             if (material.material.toString() === material_id.toString()) {
                 material.quantity = quantity;
 
-                return recipe;
+                return material;
             }
-            return recipe;
+            return material;
         });
-        
+
         product.materials = []
         product.materials = newMaterialsArray;
 
