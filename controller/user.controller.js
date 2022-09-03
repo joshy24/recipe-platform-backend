@@ -1000,14 +1000,12 @@ module.exports.editProductRecipe = async(req,res) => {
 
         const newRecipesArray = product.recipes.map(recipe => {
             if (recipe.recipe.toString() === recipe_id.toString()) {
-                recipe.quantity = quantity
+                recipe.quantity.amount = quantity
                 return recipe
             }
             
             return recipe;
         });
-
-        console.log(newRecipesArray)
         
         product.recipes = []
         product.recipes = newRecipesArray;
