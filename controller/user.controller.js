@@ -652,7 +652,7 @@ module.exports.editInventoryMaterial = async(req,res) => {
 module.exports.getIngredientsToAdd = async(req,res) => {
     const { recipe_id, search_term, offset, limit } = req.query
 
-    if(!recipe_id){
+    if(!recipe_id || !offset || !limit){
         return res.status(400).send({response: "bad request"})
     }
 
@@ -691,9 +691,9 @@ module.exports.getIngredientsToAdd = async(req,res) => {
 }
 
 module.exports.getMaterialsToAdd = async(req,res) => {
-    const { product_id } = req.query
+    const { product_id, search_term, offset, limit } = req.query
 
-    if(!product_id){
+    if(!product_id || !offset || !limit){
         return res.status(400).send({response: "bad request"})
     }
 
