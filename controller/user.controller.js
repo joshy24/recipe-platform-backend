@@ -1070,12 +1070,14 @@ module.exports.editProductMaterial = async(req,res) => {
         }
 
         const newMaterialsArray = product.materials.map(material => {
-            if (material.material === material_id) {
-                return {...material, quantity: quantity};
+            if (material.material.toString() === material_id.toString()) {
+                material.quantity = quantity;
+
+                return recipe;
             }
             return recipe;
         });
-
+        
         product.materials = []
         product.materials = newMaterialsArray;
 
