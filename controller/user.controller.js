@@ -1005,6 +1005,8 @@ module.exports.editProductRecipe = async(req,res) => {
             return recipe;
         });
 
+        console.log(newRecipesArray)
+        
         product.recipes = []
         product.recipes = newRecipesArray;
 
