@@ -49,6 +49,19 @@ module.exports.getMaterialsNotInArray = async(data_array, MaterialModel) => {
     return await MaterialModel.find({_id: {$nin: data_array}}).lean()
 }
 
+module.exports.getMaterialsNotInArrayWithSearchTerm = async(data_array, offset, limit, MaterialModel, name) => {
+    
+    let query = {
+        _id: {$nin: data_array}
+    }
+
+    if(!!name){
+        query = {...query, $text: { $search: name }}
+    }
+
+    return await MaterialModel.paginate(query, {offset,limit})
+}
+
 module.exports.getAllMaterialsToAdd = async(MaterialModel) => {
     return await MaterialModel.find({}).lean()
 }

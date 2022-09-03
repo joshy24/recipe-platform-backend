@@ -708,6 +708,12 @@ module.exports.getMaterialsToAdd = async(req,res) => {
             const product_materials_ids = product.materials.map(material => {
                 return material.material
             })
+
+            if(offset && limit){
+                const materials_found = await MaterialService.getMaterialsNotInArrayWithSearchTerm(product_materials_ids, offset, limit, req.tenantModels.materialModel, search_term)
+               
+                return res.status(200).send({response: materials_found.docs})
+            }
     
             const materials_found = await MaterialService.getMaterialsNotInArray(product_materials_ids, req.tenantModels.materialModel)
         
