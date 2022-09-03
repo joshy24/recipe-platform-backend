@@ -987,6 +987,8 @@ module.exports.editProductRecipe = async(req,res) => {
     const {recipe_id, quantity, id} = req.body
     //quantity should be an object containing amount and unit
 
+    console.log({quantity})
+
     if(!id || !recipe_id || !quantity){
         return res.status(400).send({response: "bad request"})
     }
