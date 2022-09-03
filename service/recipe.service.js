@@ -32,6 +32,19 @@ module.exports.getRecipesNotInArray = async(data_array, RecipeModel) => {
     return await RecipeModel.find({_id: {$nin: data_array}}).lean()
 }
 
+module.exports.getRecipesNotInArrayWithSearchTerm = async(data_array, offset, limit, RecipeModel, name) => {
+    
+    let query = {
+        _id: {$nin: data_array}
+    }
+
+    if(!!name){
+        query = {...query, $text: { $search: name }}
+    }
+
+    return await RecipeModel.paginate(query, {offset,limit})
+}
+
 module.exports.getAllRecipesToAdd = async(RecipeModel) => {
     return await RecipeModel.find({}).lean()
 }

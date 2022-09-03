@@ -733,9 +733,9 @@ module.exports.getMaterialsToAdd = async(req,res) => {
 
 
 module.exports.getRecipesToAdd = async(req,res) => {
-    const { product_id } = req.query
+    const { product_id, search_term, offset, limit } = req.query
 
-    if(!product_id){
+    if(!product_id || !offset || !limit){
         return res.status(400).send({response: "bad request"})
     }
 
@@ -750,6 +750,12 @@ module.exports.getRecipesToAdd = async(req,res) => {
             const product_recipes_ids = product.recipes.map(recipe => {
                 return recipe.recipe
             })
+
+            if(offset && limit){
+                const recipes_found = await RecipeService.getRecipesNotInArrayWithSearchTerm(product_recipes_ids, offset, limit, req.tenantModels.recipeModel, search_term)
+               
+                return res.status(200).send({response: recipes_found.docs})
+            }
     
             const recipes_found = await RecipeService.getRecipesNotInArray(product_recipes_ids, req.tenantModels.recipeModel)
         
