@@ -1003,7 +1003,8 @@ module.exports.editProductRecipe = async(req,res) => {
                 console.log({...recipe, quantity: quantity})
                 return {...recipe, quantity: quantity};
             }
-            return console.log(recipe);
+            console.log(recipe)
+            return recipe;
         });
 
         
