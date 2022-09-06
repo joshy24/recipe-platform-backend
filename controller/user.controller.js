@@ -1247,14 +1247,14 @@ module.exports.getProductMaterials = async(req,res) => {
 //Orders
 
 module.exports.getAllOrders = async (req,res) => {
-    const { offset, limit } = req.query;
+    const { page, limit } = req.query;
     
-    if(!offset || !limit){
+    if(!page || !limit){
         return res.status(400).send({response: "bad request"})
     }
 
     try{
-        let allOrders = await OrderService.getAllOrders(req.tenantModels.orderModel, { offset, limit })
+        let allOrders = await OrderService.getAllOrders(req.tenantModels.orderModel, { page, limit })
 
         if(allOrders.docs.length > 0){
             const allOrdersArray = await Promise.all(allOrders.docs.map(async (anOrder) => {
@@ -1677,9 +1677,9 @@ module.exports.deleteOrderProduct = async(req,res) => {
 }
 
 module.exports.getProductstoAdd = async(req,res) => {
-    const {id} = req.query
+    const {id, search_term, offset, limit} = req.query
 
-    if(!id){
+    if(!id || !offset || !limit){
         return res.status(400).send({response: "bad request"})
     }
 
@@ -1694,6 +1694,12 @@ module.exports.getProductstoAdd = async(req,res) => {
             const orderProductsIds = order.products.map(aProduct => {
                 return aProduct.product;
             })
+
+            if(offset && limit){
+                const products_found = await ProductService.getProductsNotInArrayWithSearchTerm(orderProductsIds, offset, limit, req.tenantModels.productModel, search_term)
+               
+                return res.status(200).send({response: products_found.docs})
+            }
 
             const products_found = await ProductService.getProductsNotInArray(orderProductsIds, req.tenantModels.productModel)
         

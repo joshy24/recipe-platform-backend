@@ -35,6 +35,19 @@ module.exports.getProductsNotInArray = async(data_array, ProductModel) => {
     return await ProductModel.find({_id: {$nin: data_array}}).lean()
 }
 
+module.exports.getProductsNotInArrayWithSearchTerm = async(data_array, offset, limit, ProductModel, name) => {
+    
+    let query = {
+        _id: {$nin: data_array}
+    }
+
+    if(!!name){
+        query = {...query, $text: { $search: name }}
+    }
+
+    return await ProductModel.paginate(query, {offset,limit})
+}
+
 module.exports.getAllProductsToAdd = async(ProductModel) => {
     return await ProductModel.find({}).lean()
 }
