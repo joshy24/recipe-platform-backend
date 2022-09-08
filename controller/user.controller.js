@@ -176,10 +176,10 @@ Recipes / Recipe
 
 module.exports.getAllRecipes = async(req,res) => {
     
-    const { offset, limit } = req.query;
+    const { page, limit } = req.query;
 
     try{
-        let allRecipes = await RecipeService.getAllRecipes(req.tenantModels.recipeModel, { offset, limit })
+        let allRecipes = await RecipeService.getAllRecipes(req.tenantModels.recipeModel, { page, limit })
 
         if(allRecipes.docs && allRecipes.docs.length == 0 ){
             return res.status(200).send({response: allRecipes})
@@ -413,9 +413,9 @@ module.exports.deleteRecipeIngredient = async(req,res) => {
 }
 
 module.exports.getRecipeIngredients = async(req,res) => {
-    const {id, offset, limit} = req.query
+    const {id, page, limit} = req.query
 
-    if(!id || !offset || !limit){
+    if(!id || !page || !limit){
         return res.status(400).send({response: "bad request"})
     }
 
@@ -434,7 +434,7 @@ module.exports.getRecipeIngredients = async(req,res) => {
             return ingredient.ingredient;
         })
 
-        const fullIngredientObjects = await IngredientService.findIngredientsFromArrayIds(recipeIngredientsIdsArray, req.tenantModels.ingredientModel, offset,limit)
+        const fullIngredientObjects = await IngredientService.findIngredientsFromArrayIds(recipeIngredientsIdsArray, req.tenantModels.ingredientModel, page,limit)
         
         const recipeIngredients = fullIngredientObjects.docs.map(fullIngredientObject => {
             const foundIngredient = recipe.ingredients.find(recipeIngredient => recipeIngredient.ingredient.toString() == fullIngredientObject._id.toString())
@@ -462,15 +462,15 @@ Inventory
 */
 
 module.exports.getInventory = async(req,res) => {
-    const { limit, offset, type, searchTerm, status } = req.query;
+    const { limit, page, type, searchTerm, status } = req.query;
 
-    if(!limit || !offset || !type || !status){
+    if(!limit || !page || !type || !status){
         return res.status(400).send({response: "bad request"})
     }
 
     try{
         if(type.toLowerCase() == "ingredients" || type.toLowerCase() == "ingredient"){
-            let allIngredients = await IngredientService.getAllIngredients(req.tenantModels.ingredientModel, {limit, offset}, searchTerm, status)
+            let allIngredients = await IngredientService.getAllIngredients(req.tenantModels.ingredientModel, {limit, page}, searchTerm, status)
             
             const editedList = getQuantityInStockForInventoryList(allIngredients.docs)
             
@@ -478,7 +478,7 @@ module.exports.getInventory = async(req,res) => {
         }
         
         if(type.toLowerCase() == "materials" || type.toLowerCase() == "material"){
-            let allMaterials = await MaterialService.getAllMaterials(req.tenantModels.materialModel, {limit, offset}, searchTerm,  status)
+            let allMaterials = await MaterialService.getAllMaterials(req.tenantModels.materialModel, {limit, page}, searchTerm,  status)
             
             const editedList = getQuantityInStockForInventoryList(allMaterials.docs)
             
@@ -650,9 +650,9 @@ module.exports.editInventoryMaterial = async(req,res) => {
 }
 
 module.exports.getIngredientsToAdd = async(req,res) => {
-    const { recipe_id, search_term, offset, limit } = req.query
+    const { recipe_id, search_term, page, limit } = req.query
 
-    if(!recipe_id || !offset || !limit){
+    if(!recipe_id || !page || !limit){
         return res.status(400).send({response: "bad request"})
     }
 
@@ -668,8 +668,8 @@ module.exports.getIngredientsToAdd = async(req,res) => {
                 return ingredient.ingredient
             })
             
-            if(offset && limit){
-                const ingredients_found = await IngredientService.getIngredientsNotInArrayWithSearchTerm(recipe_ingredients_ids, offset, limit, req.tenantModels.ingredientModel, search_term)
+            if(page && limit){
+                const ingredients_found = await IngredientService.getIngredientsNotInArrayWithSearchTerm(recipe_ingredients_ids, page, limit, req.tenantModels.ingredientModel, search_term)
                
                 return res.status(200).send({response: ingredients_found.docs})
             }
@@ -691,9 +691,9 @@ module.exports.getIngredientsToAdd = async(req,res) => {
 }
 
 module.exports.getMaterialsToAdd = async(req,res) => {
-    const { product_id, search_term, offset, limit } = req.query
+    const { product_id, search_term, page, limit } = req.query
 
-    if(!product_id || !offset || !limit){
+    if(!product_id || !page || !limit){
         return res.status(400).send({response: "bad request"})
     }
 
@@ -709,8 +709,8 @@ module.exports.getMaterialsToAdd = async(req,res) => {
                 return material.material
             })
 
-            if(offset && limit){
-                const materials_found = await MaterialService.getMaterialsNotInArrayWithSearchTerm(product_materials_ids, offset, limit, req.tenantModels.materialModel, search_term)
+            if(page && limit){
+                const materials_found = await MaterialService.getMaterialsNotInArrayWithSearchTerm(product_materials_ids, page, limit, req.tenantModels.materialModel, search_term)
                
                 return res.status(200).send({response: materials_found.docs})
             }
@@ -733,9 +733,9 @@ module.exports.getMaterialsToAdd = async(req,res) => {
 
 
 module.exports.getRecipesToAdd = async(req,res) => {
-    const { product_id, search_term, offset, limit } = req.query
+    const { product_id, search_term, page, limit } = req.query
 
-    if(!product_id || !offset || !limit){
+    if(!product_id || !page || !limit){
         return res.status(400).send({response: "bad request"})
     }
 
@@ -751,8 +751,8 @@ module.exports.getRecipesToAdd = async(req,res) => {
                 return recipe.recipe
             })
 
-            if(offset && limit){
-                const recipes_found = await RecipeService.getRecipesNotInArrayWithSearchTerm(product_recipes_ids, offset, limit, req.tenantModels.recipeModel, search_term)
+            if(page && limit){
+                const recipes_found = await RecipeService.getRecipesNotInArrayWithSearchTerm(product_recipes_ids, page, limit, req.tenantModels.recipeModel, search_term)
                
                 return res.status(200).send({response: recipes_found.docs})
             }
@@ -784,14 +784,16 @@ Products / Product
 
 module.exports.getAllProducts = async(req,res) => {
 
-    const { offset, limit } = req.query;
+    let { page, limit } = req.query;
 
-    if(!offset || !limit){
+    if(!page || !limit){
         return res.status(400).send({response: "bad request"})
     }
 
+    page = parseInt(page)
+
     try{
-        let allProducts = await ProductService.getAllProducts(req.tenantModels.productModel, { offset, limit })
+        let allProducts = await ProductService.getAllProducts(req.tenantModels.productModel, { page, limit })
 
         const updatedProducts = await Promise.all(allProducts.docs.map(async productFound => {
             const recipesIds = productFound.recipes.map(aRecipe => {
@@ -856,14 +858,14 @@ module.exports.getAllProducts = async(req,res) => {
 }
 
 module.exports.searchProducts = async(req,res) => {
-    const { limit, offset, searchTerm } = req.query;
+    const { limit, page, searchTerm } = req.query;
 
-    if(!limit || !offset || !searchTerm){
+    if(!limit || !page || !searchTerm){
         return res.status(400).send({response: "bad request"})
     }
 
     try{
-        let results = await ProductService.getProductsSearch(searchTerm, req.tenantModels.productModel, {limit, offset})
+        let results = await ProductService.getProductsSearch(searchTerm, req.tenantModels.productModel, {limit, page})
 
         return res.status(200).send({response: results})
     }
@@ -1128,9 +1130,9 @@ module.exports.deleteProductMaterial = async(req,res) => {
 }
 
 module.exports.getProductRecipes = async(req,res) => {
-    const {id, offset, limit} = req.query
+    const {id, page, limit} = req.query
 
-    if(!id || !limit || !offset){
+    if(!id || !limit || !page){
         return res.status(400).send({response: "bad request"})
     }
 
@@ -1151,7 +1153,7 @@ module.exports.getProductRecipes = async(req,res) => {
             })
     
             //find all recipes based on the array of ids
-            const arrayOfFullRecipeObjects = await RecipeService.findRecipesFromArrayIds(productRecipesIdsArray, req.tenantModels.recipeModel, offset, limit);
+            const arrayOfFullRecipeObjects = await RecipeService.findRecipesFromArrayIds(productRecipesIdsArray, req.tenantModels.recipeModel, page, limit);
     
             if(arrayOfFullRecipeObjects.docs.length == 0){
                 return res.status(200).send({response: {}})
@@ -1192,9 +1194,9 @@ module.exports.getProductRecipes = async(req,res) => {
 }
 
 module.exports.getProductMaterials = async(req,res) => {
-    const {id,offset,limit} = req.query
+    const {id,page,limit} = req.query
 
-    if(!id || !limit || !offset){
+    if(!id || !limit || !page){
         return res.status(400).send({response: "bad request"})
     }
 
@@ -1215,7 +1217,7 @@ module.exports.getProductMaterials = async(req,res) => {
             })
     
             //find all materials based on the array of ids
-            const arrayOfFullMaterialObjects = await MaterialService.findMaterialsFromArrayIds(productMaterialsIdsArray, req.tenantModels.materialModel,offset,limit);
+            const arrayOfFullMaterialObjects = await MaterialService.findMaterialsFromArrayIds(productMaterialsIdsArray, req.tenantModels.materialModel,page,limit);
             
             if(arrayOfFullMaterialObjects.docs.length == 0){
                 return res.status(200).send({response: {}})
@@ -1324,14 +1326,14 @@ module.exports.addOrder = async(req,res) => {
 }
 
 module.exports.searchOrders = async(req,res) => {
-    const { limit, offset, searchTerm } = req.query;
+    const { limit, page, searchTerm } = req.query;
 
-    if(!limit || !offset || !searchTerm){
+    if(!limit || !page || !searchTerm){
         return res.status(400).send({response: "bad request"})
     }
 
     try{
-        let results = await OrderService.getOrdersSearch(searchTerm, req.tenantModels.orderModel, {limit, offset})
+        let results = await OrderService.getOrdersSearch(searchTerm, req.tenantModels.orderModel, {limit, page})
 
         return res.status(200).send({response: results})
     }
@@ -1345,9 +1347,9 @@ module.exports.searchOrders = async(req,res) => {
 //Order
 
 module.exports.getOrderProducts = async(req,res) => {
-    const {id, offset, limit} = req.query
+    const {id, page, limit} = req.query
 
-    if(!id || !offset || !limit){
+    if(!id || !page || !limit){
         return res.status(400).send({response: "bad request"})
     }
 
@@ -1366,7 +1368,7 @@ module.exports.getOrderProducts = async(req,res) => {
             return product.product
         })
 
-        const productsFoundArray = await ProductService.getProductsFromIdsArray(orderProductsIds, req.tenantModels.productModel, offset, limit)
+        const productsFoundArray = await ProductService.getProductsFromIdsArray(orderProductsIds, req.tenantModels.productModel, page, limit)
         
         const updatedOrderProducts = await Promise.all(productsFoundArray.docs.map(async productFound => {
             const foundProduct = order.products.find(aProduct => aProduct.product.toString() === productFound._id.toString())
@@ -1677,9 +1679,9 @@ module.exports.deleteOrderProduct = async(req,res) => {
 }
 
 module.exports.getProductstoAdd = async(req,res) => {
-    const {id, search_term, offset, limit} = req.query
+    const {id, search_term, page, limit} = req.query
 
-    if(!id || !offset || !limit){
+    if(!id || !page || !limit){
         return res.status(400).send({response: "bad request"})
     }
 
@@ -1695,8 +1697,8 @@ module.exports.getProductstoAdd = async(req,res) => {
                 return aProduct.product;
             })
 
-            if(offset && limit){
-                const products_found = await ProductService.getProductsNotInArrayWithSearchTerm(orderProductsIds, offset, limit, req.tenantModels.productModel, search_term)
+            if(page && limit){
+                const products_found = await ProductService.getProductsNotInArrayWithSearchTerm(orderProductsIds, page, limit, req.tenantModels.productModel, search_term)
                
                 return res.status(200).send({response: products_found.docs})
             }

@@ -27,7 +27,7 @@ module.exports.getRecentOrders = async (OrderModel) => {
 
 module.exports.getOrdersSearch = async (name, OrderModel) => {
     //Needs to be refactored
-    return await OrderModel.paginate({ $text: { $search: name } }, {offset: 0, limit: 1000})
+    return await OrderModel.paginate({ $text: { $search: name } }, {page: 0, limit: 1000})
 }
 
 module.exports.countOrders = async(OrderModel) => {

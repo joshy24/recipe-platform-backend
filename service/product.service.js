@@ -15,16 +15,16 @@ module.exports.getAllProducts = async (ProductModel, pagination) => {
     return await ProductModel.paginate({}, pagination)
 }
 
-module.exports.getProductsSearch = async (name, ProductModel, {offset, limit}) => {
-    return await ProductModel.paginate({ $text: { $search: name } }, {offset, limit})
+module.exports.getProductsSearch = async (name, ProductModel, {page, limit}) => {
+    return await ProductModel.paginate({ $text: { $search: name } }, {page, limit})
 }
 
 module.exports.getProduct = async (id, ProductModel) => {
     return await ProductModel.findOne({_id: id})
 }
 
-module.exports.getProductsFromIdsArray = async (arrayOfIds, ProductModel, offset, limit) => {
-    return await ProductModel.paginate({_id: {$in: arrayOfIds}}, {offset, limit})
+module.exports.getProductsFromIdsArray = async (arrayOfIds, ProductModel, page, limit) => {
+    return await ProductModel.paginate({_id: {$in: arrayOfIds}}, {page, limit})
 }
 
 module.exports.getProductsFromIdsArrayNoPagination = async (arrayOfIds, ProductModel) => {
@@ -35,7 +35,7 @@ module.exports.getProductsNotInArray = async(data_array, ProductModel) => {
     return await ProductModel.find({_id: {$nin: data_array}}).lean()
 }
 
-module.exports.getProductsNotInArrayWithSearchTerm = async(data_array, offset, limit, ProductModel, name) => {
+module.exports.getProductsNotInArrayWithSearchTerm = async(data_array, page, limit, ProductModel, name) => {
     
     let query = {
         _id: {$nin: data_array}
@@ -45,7 +45,7 @@ module.exports.getProductsNotInArrayWithSearchTerm = async(data_array, offset, l
         query = {...query, $text: { $search: name }}
     }
 
-    return await ProductModel.paginate(query, {offset,limit})
+    return await ProductModel.paginate(query, {page,limit})
 }
 
 module.exports.getAllProductsToAdd = async(ProductModel) => {

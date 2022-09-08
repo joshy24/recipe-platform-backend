@@ -14,8 +14,8 @@ module.exports.countMaterials = async(MaterialModel) => {
     return await MaterialModel.estimatedDocumentCount();
 }
 
-module.exports.findMaterialsFromArrayIds = async(arrayIds, MaterialModel, offset, limit) => {
-    return await MaterialModel.paginate({_id: { $in: arrayIds} }, {offset,limit})
+module.exports.findMaterialsFromArrayIds = async(arrayIds, MaterialModel, page, limit) => {
+    return await MaterialModel.paginate({_id: { $in: arrayIds} }, {page,limit})
 }
 
 module.exports.findMaterialsFromArrayIdsNoPagination = async(arrayIds, MaterialModel) => {
@@ -40,7 +40,7 @@ module.exports.getAllMaterials = async(MaterialModel, pagination, searchTerm, st
 module.exports.getMaterialsSearch = async(searchTerm, MaterialModel, pagination) => {
     return await MaterialModel.find({ $text: { $search: searchTerm }})
             .limit(pagination.limit)
-            .skip(pagination.offset)
+            .skip(pagination.page)
             .exec()
 }
 
@@ -49,7 +49,7 @@ module.exports.getMaterialsNotInArray = async(data_array, MaterialModel) => {
     return await MaterialModel.find({_id: {$nin: data_array}}).lean()
 }
 
-module.exports.getMaterialsNotInArrayWithSearchTerm = async(data_array, offset, limit, MaterialModel, name) => {
+module.exports.getMaterialsNotInArrayWithSearchTerm = async(data_array, page, limit, MaterialModel, name) => {
     
     let query = {
         _id: {$nin: data_array}
@@ -59,7 +59,7 @@ module.exports.getMaterialsNotInArrayWithSearchTerm = async(data_array, offset, 
         query = {...query, $text: { $search: name }}
     }
 
-    return await MaterialModel.paginate(query, {offset,limit})
+    return await MaterialModel.paginate(query, {page,limit})
 }
 
 module.exports.getAllMaterialsToAdd = async(MaterialModel) => {

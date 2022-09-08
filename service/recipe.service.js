@@ -17,11 +17,11 @@ module.exports.getAllRecipes = async (RecipeModel, pagination) => {
 
 module.exports.getRecipesSearch = async (name, RecipeModel) => {
     //Needs to be refactored
-    return await RecipeModel.paginate({ $text: { $search: name } }, {offset: 0, limit: 1000})
+    return await RecipeModel.paginate({ $text: { $search: name } }, {page: 0, limit: 1000})
 }
 
-module.exports.findRecipesFromArrayIds = async(arrayIds, RecipeModel, offset, limit) => {
-    return await RecipeModel.paginate({_id: { $in: arrayIds} }, {offset,limit})
+module.exports.findRecipesFromArrayIds = async(arrayIds, RecipeModel, page, limit) => {
+    return await RecipeModel.paginate({_id: { $in: arrayIds} }, {page,limit})
 }
 
 module.exports.findRecipesFromArrayIdsNoPagination = async(arrayIds, RecipeModel) => {
@@ -32,7 +32,7 @@ module.exports.getRecipesNotInArray = async(data_array, RecipeModel) => {
     return await RecipeModel.find({_id: {$nin: data_array}}).lean()
 }
 
-module.exports.getRecipesNotInArrayWithSearchTerm = async(data_array, offset, limit, RecipeModel, name) => {
+module.exports.getRecipesNotInArrayWithSearchTerm = async(data_array, page, limit, RecipeModel, name) => {
     
     let query = {
         _id: {$nin: data_array}
@@ -42,7 +42,7 @@ module.exports.getRecipesNotInArrayWithSearchTerm = async(data_array, offset, li
         query = {...query, $text: { $search: name }}
     }
 
-    return await RecipeModel.paginate(query, {offset,limit})
+    return await RecipeModel.paginate(query, {page,limit})
 }
 
 module.exports.getAllRecipesToAdd = async(RecipeModel) => {
