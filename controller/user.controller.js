@@ -892,16 +892,14 @@ module.exports.deleteProduct = async(req,res) => {
 }
 
 module.exports.addProduct = async(req,res) => {
-    const default_profit_margin = req.tenant.profit_margin
-
-    const { name, profit_margin=default_profit_margin, labour_cost = 0, overhead_cost = 0, actual_selling_price = 0 } = req.body;
+    const { name } = req.body;
 
     if(!name || !profit_margin || !labour_cost || !overhead_cost){
         return res.status(400).send({response: "bad request"})
     }
-
+    
     try{
-        let createdProduct = await ProductService.createProduct({ name,profit_margin,labour_cost,overhead_cost,actual_selling_price}, req.tenantModels.productModel)
+        let createdProduct = await ProductService.createProduct({ name }, req.tenantModels.productModel)
 
         return res.status(200).send({response: createdProduct})
     }
