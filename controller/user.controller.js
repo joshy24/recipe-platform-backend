@@ -833,7 +833,7 @@ module.exports.getAllProducts = async(req,res) => {
                     recipeCost += getPriceOfQuantity(ingredientObject.price, ingredientObject.purchase_quantity.amount, (foundIngredient.quantity ? foundIngredient.quantity : 1));
                 })
 
-                allRecipesCost += recipeCost * (foundRecipe.quantity && foundRecipe.quantity>0 ? foundRecipe.quantity : 1)
+                allRecipesCost += recipeCost * (foundRecipe.quantity.amount && foundRecipe.quantity.amount > 0 ? foundRecipe.quantity.amount : 1)
 
                 return true;
             }))
@@ -854,7 +854,7 @@ module.exports.getAllProducts = async(req,res) => {
 
             let productCost = allMaterialsCost + allRecipesCost + productFound._doc.labour_cost + productFound._doc.overhead_cost
 
-            const profitCost = productFound._doc.profit_margin / 100 * productCost
+            const profitCost = productFound._doc.profit_margin ? productFound._doc.profit_margin / 100 * productCost : 0
 
             const totalCost = productCost + profitCost
             
@@ -1408,7 +1408,7 @@ module.exports.getOrderProducts = async(req,res) => {
                     recipeCost += getPriceOfQuantity(ingredientObject.price, ingredientObject.purchase_quantity.amount, (foundIngredient.quantity ? foundIngredient.quantity : 1)) 
                 })
 
-                allRecipesCost += recipeCost * (foundRecipe.quantity && foundRecipe.quantity>0 ? foundRecipe.quantity : 1)
+                allRecipesCost += recipeCost * (foundRecipe.quantity.amount && foundRecipe.quantity.amount > 0 ? foundRecipe.quantity.amount : 1)
 
                 return true;
             }))
@@ -1429,9 +1429,9 @@ module.exports.getOrderProducts = async(req,res) => {
 
             //console.log({allMaterialsCost, allRecipesCost, labourCost: productFound._doc.labour_cost, overheadCost: productFound._doc.overhead_cost})
 
-            let productCost = allMaterialsCost + allRecipesCost + productFound._doc.labour_cost + productFound._doc.overhead_cost
+            let productCost = allMaterialsCost + allRecipesCost + parseInt(productFound._doc.labour_cost) + parseInt(productFound._doc.overhead_cost)
 
-            const profitCost = productFound._doc.profit_margin / 100 * productCost
+            const profitCost = productFound._doc.profit_margin ? productFound._doc.profit_margin / 100 * productCost : 0
 
             const totalCost = productFound.actual_selling_price && productFound.actual_selling_price > 0 ? productFound.actual_selling_price : (productCost + profitCost)
             
@@ -1540,7 +1540,7 @@ module.exports.fulfillOrder = async(req,res) => {
                         const foundRecipe = fullProductObject.recipes.find(aRecipe => aRecipe.recipe.toString() === fullRecipeObjectItem._id.toString())
 
                         //The quantity of the recipe
-                        const recipeQuantity = foundRecipe.quantity;
+                        const recipeQuantity = foundRecipe.quantity.amount;
 
                         const ingredientsIds = fullRecipeObjectItem.ingredients.map(anIngredient => {
                             return anIngredient.ingredient
@@ -1802,7 +1802,7 @@ module.exports.getProfitTableProductChanges = async(req,res) => {
                     await Promise.all(allProductRecipes.map(async allProductRecipe => {
                         const aFoundRecipe = aProduct.recipes.find(aRecipe => aRecipe.recipe._id.toString() === allProductRecipe._id.toString())
 
-                        const recipeQuantity = aFoundRecipe.quantity
+                        const recipeQuantity = aFoundRecipe.quantity.amount
 
                         //get cost of recipe ingredients
 
