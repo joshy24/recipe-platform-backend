@@ -1709,8 +1709,8 @@ module.exports.getProductstoAdd = async(req,res) => {
 
             if(page && limit){
                 const products_found = await ProductService.getProductsNotInArrayWithSearchTerm(orderProductsIds, page, limit, req.tenantModels.productModel, search_term)
-               
-                return res.status(200).send({response: products_found.docs})
+                
+                return res.status(200).send({response: products_found})
             }
 
             const products_found = await ProductService.getProductsNotInArray(orderProductsIds, req.tenantModels.productModel)
@@ -1718,6 +1718,11 @@ module.exports.getProductstoAdd = async(req,res) => {
             return res.status(200).send({response: products_found})
         }
         else{
+            if(page && limit){
+                const materials_found = await ProductService.getAllProductsToAddSearch(page, limit, req.tenantModels.productModel, search_term)
+               
+                return res.status(200).send({response: materials_found})
+            }
             const products_found = await ProductService.getAllProductsToAdd(req.tenantModels.productModel)
             
             return res.status(200).send({response: products_found})

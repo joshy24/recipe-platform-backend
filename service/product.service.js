@@ -52,6 +52,16 @@ module.exports.getAllProductsToAdd = async(ProductModel) => {
     return await ProductModel.find({}).lean()
 }
 
+module.exports.getAllProductsToAddSerarch = async(page, limit, ProductModel, name) => {
+    let query = {}
+
+    if(!!name){
+        query = {...query, $text: { $search: name }}
+    }
+
+    return await ProductModel.paginate(query, {page,limit})
+}
+
 module.exports.deleteProduct = async(id, ProductModel) => {
     return await ProductModel.deleteOne({_id: id})
 }
