@@ -13,15 +13,12 @@ const schema = new Schema({
         unique: true
     },
     profit_margin:{
-        required: true,
         type: Number,
     },
     labour_cost: {
-        required: true,
         type: Number,
     },
     overhead_cost: {
-        required: true,
         type: Number,
     },
     actual_selling_price: {

@@ -710,9 +710,10 @@ module.exports.getMaterialsToAdd = async(req,res) => {
             })
 
             if(page && limit){
+                console.log(page, limit)
                 const materials_found = await MaterialService.getMaterialsNotInArrayWithSearchTerm(product_materials_ids, page, limit, req.tenantModels.materialModel, search_term)
                
-                return res.status(200).send({response: materials_found.docs})
+                return res.status(200).send({response: materials_found})
             }
     
             const materials_found = await MaterialService.getMaterialsNotInArray(product_materials_ids, req.tenantModels.materialModel)
@@ -894,10 +895,10 @@ module.exports.deleteProduct = async(req,res) => {
 module.exports.addProduct = async(req,res) => {
     const { name } = req.body;
 
-    if(!name || !profit_margin || !labour_cost || !overhead_cost){
+    if(!name){
         return res.status(400).send({response: "bad request"})
     }
-    
+
     try{
         let createdProduct = await ProductService.createProduct({ name }, req.tenantModels.productModel)
 
