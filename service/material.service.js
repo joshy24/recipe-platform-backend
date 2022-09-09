@@ -66,6 +66,16 @@ module.exports.getAllMaterialsToAdd = async(MaterialModel) => {
     return await MaterialModel.find({}).lean()
 }
 
+module.exports.getAllMaterialsToAddSearch = async(page, limit, MaterialModel, name) => {
+    let query = {}
+
+    if(!!name){
+        query = {...query, $text: { $search: name }}
+    }
+
+    return await MaterialModel.paginate(query, {page,limit})
+}
+
 module.exports.getMaterialFromId = async(id, MaterialModel) => {
     return await MaterialModel.findOne({_id: id}).lean()
 }

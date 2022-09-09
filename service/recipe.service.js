@@ -49,6 +49,16 @@ module.exports.getAllRecipesToAdd = async(RecipeModel) => {
     return await RecipeModel.find({}).lean()
 }
 
+module.exports.getAllRecipesToAddSearch = async(page, limit, RecipeModel, name) => {
+    let query = {}
+
+    if(!!name){
+        query = {...query, $text: { $search: name }}
+    }
+
+    return await RecipeModel.paginate(query, {page,limit})
+}
+
 module.exports.getRecipe = async (id, RecipeModel) => {
     return await RecipeModel.findOne({_id: id}).lean()
 }

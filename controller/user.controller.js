@@ -710,7 +710,6 @@ module.exports.getMaterialsToAdd = async(req,res) => {
             })
 
             if(page && limit){
-                console.log(page, limit)
                 const materials_found = await MaterialService.getMaterialsNotInArrayWithSearchTerm(product_materials_ids, page, limit, req.tenantModels.materialModel, search_term)
                
                 return res.status(200).send({response: materials_found})
@@ -721,6 +720,12 @@ module.exports.getMaterialsToAdd = async(req,res) => {
             return res.status(200).send({response: materials_found})
         }
         else{
+            if(page && limit){
+                const materials_found = await MaterialService.getAllMaterialsToAddSearch(page, limit, req.tenantModels.materialModel, search_term)
+               
+                return res.status(200).send({response: materials_found})
+            }
+
             const materials_found = await MaterialService.getAllMaterialsToAdd(req.tenantModels.materialModel)
 
             return res.status(200).send({response: materials_found})
@@ -755,7 +760,7 @@ module.exports.getRecipesToAdd = async(req,res) => {
             if(page && limit){
                 const recipes_found = await RecipeService.getRecipesNotInArrayWithSearchTerm(product_recipes_ids, page, limit, req.tenantModels.recipeModel, search_term)
                
-                return res.status(200).send({response: recipes_found.docs})
+                return res.status(200).send({response: recipes_found})
             }
     
             const recipes_found = await RecipeService.getRecipesNotInArray(product_recipes_ids, req.tenantModels.recipeModel)
@@ -763,6 +768,12 @@ module.exports.getRecipesToAdd = async(req,res) => {
             return res.status(200).send({response: recipes_found})
         }
         else{
+            if(page && limit){
+                const recipes_found = await RecipeService.getAllRecipesToAddSearch(page, limit, req.tenantModels.recipeModel, search_term)
+               
+                return res.status(200).send({response: recipes_found})
+            }
+
             const recipes_found = await RecipeService.getAllRecipesToAdd(req.tenantModels.recipeModel)
 
             return res.status(200).send({response: recipes_found})
