@@ -858,7 +858,7 @@ module.exports.getAllProducts = async(req,res) => {
                 allMaterialsCost += getPriceOfQuantity(aProductMaterial.price, aProductMaterial.purchase_quantity.amount, (foundMaterial.quantity ? foundMaterial.quantity : 1));
             }))
 
-            let productCost = allMaterialsCost + allRecipesCost + productFound._doc.labour_cost + productFound._doc.overhead_cost
+            let productCost = allMaterialsCost + allRecipesCost + (productFound._doc.labour_cost ? productFound._doc.labour_cost : 0) + (productFound._doc.overhead_cost ? productFound._doc.overhead_cost : 0)
 
             const profitCost = productFound._doc.profit_margin ? productFound._doc.profit_margin / 100 * productCost : 0
 
@@ -1435,7 +1435,7 @@ module.exports.getOrderProducts = async(req,res) => {
 
             //console.log({allMaterialsCost, allRecipesCost, labourCost: productFound._doc.labour_cost, overheadCost: productFound._doc.overhead_cost})
 
-            let productCost = allMaterialsCost + allRecipesCost + parseInt(productFound._doc.labour_cost) + parseInt(productFound._doc.overhead_cost)
+            let productCost = allMaterialsCost + allRecipesCost + (productFound._doc.labour_cost ? productFound._doc.labour_cost : 0) + (productFound._doc.overhead_cost ? productFound._doc.overhead_cost : 0)
 
             const profitCost = productFound._doc.profit_margin ? productFound._doc.profit_margin / 100 * productCost : 0
 
@@ -1725,7 +1725,6 @@ module.exports.getProductstoAdd = async(req,res) => {
         }
         else{
             if(page && limit){
-                const materials_found = await ProductService.getAllProductsToAddSearch(page, limit, req.tenantModels.productModel, search_term)
                
                 return res.status(200).send({response: materials_found})
             }
