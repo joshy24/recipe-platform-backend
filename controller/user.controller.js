@@ -680,7 +680,7 @@ module.exports.getIngredientsToAdd = async(req,res) => {
         }
         else{
             if(page && limit){
-                const ingredients_found = await IngredientService.getAllIngredientsToAddSearch(recipe_ingredients_ids, page, limit, req.tenantModels.ingredientModel, search_term)
+                const ingredients_found = await IngredientService.getAllIngredientsToAddSearch(page, limit, req.tenantModels.ingredientModel, search_term)
                 
                 return res.status(200).send({response: ingredients_found})
             }
