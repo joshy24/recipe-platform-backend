@@ -671,7 +671,7 @@ module.exports.getIngredientsToAdd = async(req,res) => {
             if(page && limit){
                 const ingredients_found = await IngredientService.getIngredientsNotInArrayWithSearchTerm(recipe_ingredients_ids, page, limit, req.tenantModels.ingredientModel, search_term)
                
-                return res.status(200).send({response: ingredients_found.docs})
+                return res.status(200).send({response: ingredients_found})
             }
 
             const ingredients_found = await IngredientService.getIngredientsNotInArray(recipe_ingredients_ids, req.tenantModels.ingredientModel)
@@ -679,6 +679,12 @@ module.exports.getIngredientsToAdd = async(req,res) => {
             return res.status(200).send({response: ingredients_found})
         }
         else{
+            if(page && limit){
+                const ingredients_found = await IngredientService.getAllIngredientsToAddSearch(recipe_ingredients_ids, page, limit, req.tenantModels.ingredientModel, search_term)
+                
+                return res.status(200).send({response: ingredients_found})
+            }
+
             const ingredients_found = await IngredientService.getAllIngredientsToAdd(req.tenantModels.ingredientModel)
 
             return res.status(200).send({response: ingredients_found})
