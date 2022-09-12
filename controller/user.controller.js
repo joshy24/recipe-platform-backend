@@ -442,7 +442,7 @@ module.exports.getRecipeIngredients = async(req,res) => {
             return {...fullIngredientObject._doc, quantity: foundIngredient.quantity, totalCost: getPriceOfQuantity(fullIngredientObject.price, fullIngredientObject.purchase_quantity.amount, foundIngredient.quantity)}
         })
 
-        return res.status(200).send({response: recipeIngredients})
+        return res.status(200).send({response: {...fullIngredientObjects, docs:recipeIngredients}})
     }
     catch(err){
         console.log(err)
