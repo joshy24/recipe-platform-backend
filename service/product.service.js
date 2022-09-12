@@ -52,7 +52,7 @@ module.exports.getAllProductsToAdd = async(ProductModel) => {
     return await ProductModel.find({}).lean()
 }
 
-module.exports.getAllProductsToAddSerarch = async(page, limit, ProductModel, name) => {
+module.exports.getAllProductsToAddSearch = async(page, limit, ProductModel, name) => {
     let query = {}
 
     if(!!name){
