@@ -10,7 +10,7 @@ module.exports.createOrder = async(data, OrderModel) => {
 }
 
 module.exports.getAllOrders = async (OrderModel, pagination) => {
-    return await OrderModel.paginate({}, {...pagination, sort: { createdAt:1 }});
+    return await OrderModel.paginate({}, {...pagination, sort: { createdAt:-1 }});
 }
 
 module.exports.getPendingOrdersCount = async (OrderModel, pagination) => {
