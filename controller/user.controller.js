@@ -1500,7 +1500,7 @@ module.exports.editOrder = async(req,res) => {
     }
 
     try{
-        const editedOrder = await OrderService.updateOrder(id,{name, fulfillment_date, status, note})
+        const editedOrder = await OrderService.updateOrder(id,{name, fulfillment_date, status, note}, req.tenantModels.orderModel)
 
         return res.status(200).send({response: editedOrder})
     }
