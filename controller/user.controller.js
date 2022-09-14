@@ -1505,7 +1505,8 @@ module.exports.editOrder = async(req,res) => {
         return res.status(200).send({response: editedOrder})
     }
     catch(err){
-
+        console.log(err)
+        return res.status(500).send({response: err})
     }
 }
 
