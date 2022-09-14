@@ -34,7 +34,7 @@ module.exports.getAllIngredients = async(IngredientModel, pagination, searchTerm
         break;
     }
 
-    return await IngredientModel.paginate(query, pagination);
+    return await IngredientModel.paginate(query, {...pagination, sort: { created:-1 }});
 }
 
 module.exports.getIngredientsSearch = async(searchTerm, IngredientModel) => {

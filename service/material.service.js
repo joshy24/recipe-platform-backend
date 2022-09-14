@@ -34,7 +34,7 @@ module.exports.getAllMaterials = async(MaterialModel, pagination, searchTerm, st
         break;
     }
 
-    return await MaterialModel.paginate(query, pagination);
+    return await MaterialModel.paginate(query, {...pagination, sort: { created:-1 }});
 }
 
 module.exports.getMaterialsSearch = async(searchTerm, MaterialModel, pagination) => {

@@ -12,7 +12,7 @@ module.exports.getRecipesCount = async (RecipeModel) => {
 }
 
 module.exports.getAllRecipes = async (RecipeModel, pagination) => {
-    return await RecipeModel.paginate({}, pagination)
+    return await RecipeModel.paginate({}, {...pagination, sort: { created:-1 }})
 }
 
 module.exports.getRecipesSearch = async (name, RecipeModel) => {
