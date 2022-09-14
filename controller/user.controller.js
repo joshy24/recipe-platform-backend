@@ -1725,8 +1725,9 @@ module.exports.getProductstoAdd = async(req,res) => {
         }
         else{
             if(page && limit){
-               
-                return res.status(200).send({response: materials_found})
+                const products_found = await ProductService.getAllProductsToAddSearch(page, limit, req.tenantModels.productModel, search_term)
+                
+                return res.status(200).send({response: products_found})
             }
             const products_found = await ProductService.getAllProductsToAdd(req.tenantModels.productModel)
             
