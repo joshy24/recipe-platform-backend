@@ -1493,14 +1493,14 @@ module.exports.getOrder = async(req,res) => {
 }
 
 module.exports.editOrder = async(req,res) => {
-    const {id, name, fulfillment_date, status} = req.body;
+    const {id, name, fulfillment_date, status, note} = req.body;
 
     if(!id || !name){
         return res.status(400).send({response: "bad request"})
     }
 
     try{
-        const editedOrder = await OrderService.updateOrder(id,{name, fulfillment_date, status})
+        const editedOrder = await OrderService.updateOrder(id,{name, fulfillment_date, status, note})
 
         return res.status(200).send({response: editedOrder})
     }

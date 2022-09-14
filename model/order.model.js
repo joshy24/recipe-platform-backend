@@ -23,6 +23,11 @@ const schema = new Schema({
         type: Date,
         default: Date.now()
     },
+    note: {
+        type: String,
+        maxlength: 500,
+        minlength: 2
+    },
     products: [{
         product:{
             type: mongoose.Schema.Types.ObjectId,
