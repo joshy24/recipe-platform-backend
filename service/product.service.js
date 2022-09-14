@@ -45,7 +45,7 @@ module.exports.getProductsNotInArrayWithSearchTerm = async(data_array, page, lim
         query = {...query, $text: { $search: name }}
     }
 
-    return await ProductModel.paginate(query, {page,limit})
+    return await ProductModel.paginate(query, {page,limit, sort: { created:-1 }})
 }
 
 module.exports.getAllProductsToAdd = async(ProductModel) => {
@@ -59,7 +59,7 @@ module.exports.getAllProductsToAddSearch = async(page, limit, ProductModel, name
         query = {...query, $text: { $search: name }}
     }
 
-    return await ProductModel.paginate(query, {page,limit})
+    return await ProductModel.paginate(query, {page,limit, sort: { created:-1 }})
 }
 
 module.exports.deleteProduct = async(id, ProductModel) => {
