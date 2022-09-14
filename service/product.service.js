@@ -12,7 +12,7 @@ module.exports.getProductsCount = async (ProductModel) => {
 }
 
 module.exports.getAllProducts = async (ProductModel, pagination) => {
-    return await ProductModel.paginate({}, pagination)
+    return await ProductModel.paginate({}, {...pagination, sort: { created:-1 }})
 }
 
 module.exports.getProductsSearch = async (name, ProductModel, {page, limit}) => {
