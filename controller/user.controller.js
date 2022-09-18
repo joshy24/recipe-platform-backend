@@ -1179,7 +1179,7 @@ module.exports.getProductRecipes = async(req,res) => {
             const arrayOfUpdatedFullRecipes = await Promise.all(arrayOfFullRecipeObjects.docs.map(async fullRecipeObject => {
                 const aFoundRecipe = product.recipes.find(recipe => recipe.recipe.toString() === fullRecipeObject._id.toString());
 
-                fullRecipeObject.yield.amount = aFoundRecipe.quantity.amount
+                //fullRecipeObject.yield.amount = aFoundRecipe.quantity.amount
 
                 const recipeIngredientsIdsArray = fullRecipeObject.ingredients.map(ingredientInRecipe => {
                     return ingredientInRecipe.ingredient;
@@ -1195,7 +1195,7 @@ module.exports.getProductRecipes = async(req,res) => {
                     totalRecipeCost += getPriceOfQuantity(fullIngredientObject.price, fullIngredientObject.purchase_quantity.amount, aFoundIngredient.quantity)
                 })
 
-                return {...fullRecipeObject._doc, cost: totalRecipeCost * aFoundRecipe.quantity.amount};
+                return {...fullRecipeObject._doc, yield: {...fullRecipeObject.yield, amount: aFoundRecipe.quantity.amount} ,cost: getPriceOfQuantity(totalRecipeCost, fullRecipeObject.yield.amount, aFoundRecipe.quantity.amount)};
             }))
 
             return res.status(200).send({response: {...arrayOfFullRecipeObjects, docs: arrayOfUpdatedFullRecipes}})
@@ -1593,6 +1593,7 @@ module.exports.fulfillOrder = async(req,res) => {
             }))
 
             order.status = "FULFILLED"
+            order.fulfillment_date = new Date()
             
             await OrderService.updateOrder(order._id, order, req.tenantModels.orderModel)
 
