@@ -1195,7 +1195,7 @@ module.exports.getProductRecipes = async(req,res) => {
                     totalRecipeCost += getPriceOfQuantity(fullIngredientObject.price, fullIngredientObject.purchase_quantity.amount, aFoundIngredient.quantity)
                 })
 
-                return {...fullRecipeObject._doc, yield: {...fullRecipeObject.yield, amount: aFoundRecipe.quantity.amount} ,cost: getPriceOfQuantity(totalRecipeCost, fullRecipeObject.yield.amount, aFoundRecipe.quantity.amount)};
+                return {...fullRecipeObject._doc, yield: {...fullRecipeObject.yield, amount: aFoundRecipe.quantity.amount} , cost: getPriceOfQuantity(totalRecipeCost, fullRecipeObject.yield.amount, aFoundRecipe.quantity.amount)};
             }))
 
             return res.status(200).send({response: {...arrayOfFullRecipeObjects, docs: arrayOfUpdatedFullRecipes}})
