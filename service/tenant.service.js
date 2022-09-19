@@ -31,6 +31,15 @@ module.exports.getTenantFromEmail = async (tenantEmail, tenantModel) => {
     }
 }
 
+module.exports.getTenantFromPhoneNumber = async (tenantPhoneNumber, tenantModel) => {
+    try{
+        return await tenantModel.findOne({phone_number: tenantPhoneNumber});
+    }
+    catch(err){
+        return null;
+    }
+}
+
 module.exports.getTenantFromEmailAndPhoneNumber = async (tenantEmail, tenantPhoneNumber, tenantModel) => {
     try{
         return await tenantModel.findOne({email: tenantEmail, phone_number: tenantPhoneNumber});

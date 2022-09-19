@@ -97,6 +97,51 @@ module.exports.signup = async(req,res) => {
 
 }
 
+
+module.exports.updateAccount = async(req,res) => {
+    const { firstname, lastname, phone_number, email} = req.body
+
+    if(!firstname || !lastname || !phone_number || !email){
+        return res.status(400).send({response: "bad request"});
+    }
+
+    try{
+        if(req.tenant.email.toString() !== email.toString()){
+            const tenantFound = await TenantService.getTenantFromEmail(email, req.tenantModel)
+
+            if(!!tenantFound){
+                return res.status(200).send({response: "user_email_exists"})
+            }
+        }
+
+        if(req.tenant.phone_number.toString() !== phone_number.toString()){
+            const tenantFound = await TenantService.getTenantFromPhoneNumber(phone_number, req.tenantModel)
+
+            if(!!tenantFound){
+                return res.status(200).send({response: "user_phone_number_exists"})
+            }
+        }
+
+        const newTenantDetails = {...req.tenant, firstname, lastname, phone_number, email}
+
+        const token = jwt.sign({tenantId: newTenantDetails._id, firstname: newTenantDetails.firstname, lastname: newTenantDetails.lastname}, config.secret, {issuer: "Profit Table", audience: "Tenant", expiresIn: 60*60*24*500, algorithm: "HS256"});
+                
+        newTenantDetails.tokens.push(token)
+
+        await TenantService.updateTenant(req.tenant._id, newTenantDetails, req.tenantModel)
+
+        newTenantDetails.tokens = null;
+        newTenantDetails.password = null;
+
+        return res.status(200).send({"tenant":newTenantDetails, "token":token, "msg": "success" })
+    }
+    catch(err){
+        console.log(err)
+        return res.status(500).send(err)
+    } 
+}
+
+
 module.exports.changePassword = async(req,res) => {
     const {oldPassword, newPassword, newPasswordAgain} = req.body
 
