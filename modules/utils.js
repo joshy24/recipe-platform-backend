@@ -11,7 +11,8 @@ module.exports.defaultUnitsAndConversions =  [
         amount: 1,
         unit: [
             {
-                name: "g",
+                name: "Gram",
+                abbreviation: "g",
                 amount: 1000
             }
         ]
@@ -22,7 +23,8 @@ module.exports.defaultUnitsAndConversions =  [
         amount: 1,
         unit: [
             {
-                name: "g",
+                name: "Millilitre",
+                abbreviation: "ml",
                 amount: 1000
             }
         ]
