@@ -3,6 +3,18 @@ const userController = require("../controller/user.controller")
 
 module.exports = function(router){
 
+
+    //Utils
+
+    router.get("/units", (req,res) => {
+        userController.units(req,res);
+    })
+
+
+
+
+
+
     //Account
 
     router.put("/update_account", function(req,res){
@@ -20,6 +32,7 @@ module.exports = function(router){
 
 
 
+
     //Dashboard
 
     router.get("/entities_count", function(req,res){
@@ -33,6 +46,7 @@ module.exports = function(router){
 
         
     
+
 
     //Orders
 
@@ -52,6 +66,9 @@ module.exports = function(router){
         userController.searchOrders(req,res)
     });
     
+
+
+
 
     //Order 
 
@@ -90,6 +107,7 @@ module.exports = function(router){
 
 
 
+
     //Recipes
 
     router.get("/recipes", function(req,res){
@@ -103,6 +121,7 @@ module.exports = function(router){
     router.post("/recipes/add", function(req,res){
         userController.addRecipe(req,res)
     });
+
 
 
     

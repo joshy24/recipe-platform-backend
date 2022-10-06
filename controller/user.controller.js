@@ -9,7 +9,7 @@ const TenantModels = require("../modules/tenantModels.module")
 
 const { MATERIAL, INGREDIENT } = require("../modules/constants.module")
 
-const { getPriceOfQuantity } = require("../modules/utils")
+const { getPriceOfQuantity, defaultUnitsAndConversions } = require("../modules/utils")
 
 const bcrypt = require("bcryptjs")
 
@@ -18,6 +18,10 @@ const config = require('../config/config');
 const jwt = require("jsonwebtoken")
 
 const mongoose = require('mongoose');
+
+module.exports.units = (req,res) => {
+    return res.status(200).send({response: defaultUnitsAndConversions})
+}
 
 module.exports.login = async(req,res) => {
     const {email, password} = req.body
