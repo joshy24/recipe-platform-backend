@@ -20,6 +20,7 @@ const jwt = require("jsonwebtoken")
 const mongoose = require('mongoose');
 
 module.exports.units = (req,res) => {
+    console.log(defaultUnitsAndConversions)
     return res.status(200).send({response: defaultUnitsAndConversions})
 }
 
