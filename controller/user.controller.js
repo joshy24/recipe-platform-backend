@@ -1881,7 +1881,7 @@ module.exports.getProfitTableProductChanges = async(req,res) => {
                                      }
                                  }
 
-                                 return acc + (allIngredientObject.price * aFoundIngredient.quantity)
+                                 return acc + getPriceOfQuantity(allIngredientObject.price, allIngredientObject.purchase_quantity.amount, aFoundIngredient.quantity)
                             },0)
                         
                             //join the total cost of the recipe to the total cost of all recipes
@@ -1913,7 +1913,7 @@ module.exports.getProfitTableProductChanges = async(req,res) => {
                             }
                         }
 
-                        return acc+(aFoundMaterial.quantity * aProductMaterial.price)
+                        return acc + getPriceOfQuantity(aProductMaterial.price, aProductMaterial.purchase_quantity.amount, aFoundMaterial.quantity)
                     }, 0)
                 }
 
