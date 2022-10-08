@@ -34,7 +34,7 @@ module.exports.getPlainUnits = (units) => {
         let latestUnit = aUnit;
         
         do{
-            allUnits.push({name: latestUnit.name, abbreviation: latestUnit.abbreviation})
+            allUnits.push({name: latestUnit.name, abbreviation: latestUnit.abbreviation, amount: latestUnit.amount})
             latestUnit = latestUnit.unit
         }while(!!latestUnit)
     })
