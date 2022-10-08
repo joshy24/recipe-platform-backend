@@ -27,3 +27,18 @@ module.exports.defaultUnitsAndConversions =  [
     }
 ]
 
+module.exports.getPlainUnits = (units) => {
+    const allUnits = [];
+
+    units.map(aUnit => { 
+        let latestUnit = aUnit;
+        
+        do{
+            allUnits.push({name: latestUnit.name, abbreviation: latestUnit.abbreviation})
+            latestUnit = latestUnit.unit
+        }while(!!latestUnit)
+    })
+
+    return allUnits;
+}
+

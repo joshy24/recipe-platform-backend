@@ -5,8 +5,9 @@ const { orderSchema } = require('../model/order.model')
 const { ingredientSchema } = require('../model/ingredient.model')
 const { materialSchema } = require('../model/material.model')
 const { productSchema } = require('../model/product.model')
+const { unitSchema } = require('../model/unit.model')
 
-const { RecipeModel, IngredientModel, MaterialModel, OrderModel, ProductModel } = require("../modules/tenantModels.module")
+const { RecipeModel, IngredientModel, MaterialModel, OrderModel, ProductModel, UnitModel } = require("../modules/tenantModels.module")
 
 const config = require('../config/config');
 
@@ -32,13 +33,15 @@ const getTenantModels = async(tenantId) => {
     const productModel = tenantDb.model(ProductModel, productSchema)
     const ingredientModel = tenantDb.model(IngredientModel, ingredientSchema)
     const materialModel = tenantDb.model(MaterialModel, materialSchema)
+    const unitModel = tenantDb.model(UnitModel, unitSchema)
 
     return {
         recipeModel,
         orderModel,
         productModel,
         ingredientModel,
-        materialModel
+        materialModel,
+        unitModel
     }
 }
 

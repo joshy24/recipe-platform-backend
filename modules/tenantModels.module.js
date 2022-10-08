@@ -8,3 +8,5 @@ module.exports.ProductModel = "Product"
 module.exports.MaterialModel = "Material"
 
 module.exports.IngredientModel = "Ingredient"
+
+module.exports.UnitModel = "Unit"

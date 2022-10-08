@@ -4,10 +4,22 @@ const userController = require("../controller/user.controller")
 module.exports = function(router){
 
 
-    //Utils
+    //Units
 
     router.get("/units", (req,res) => {
-        userController.units(req,res);
+        userController.getUnits(req,res);
+    })
+
+    router.post("/units", (req,res) => {
+        userController.createUnit(req,res);
+    })
+
+    router.delete("/units", (req,res) => {
+        userController.deleteUnit(req,res);
+    })
+
+    router.put("/units", (req,res) => {
+        userController.editUnit(req,res);
     })
 
 

@@ -4,12 +4,13 @@ const IngredientService = require("../service/ingredient.service")
 const ProductService = require("../service/product.service")
 const MaterialService = require("../service/material.service")
 const OrderService = require("../service/order.service")
+const UnitService = require("../service/unit.service")
 const TenantService = require("../service/tenant.service")
 const TenantModels = require("../modules/tenantModels.module")
 
 const { MATERIAL, INGREDIENT } = require("../modules/constants.module")
 
-const { getPriceOfQuantity, defaultUnitsAndConversions } = require("../modules/utils")
+const { getPriceOfQuantity, defaultUnitsAndConversions, getPlainUnits } = require("../modules/utils")
 
 const bcrypt = require("bcryptjs")
 
@@ -19,9 +20,12 @@ const jwt = require("jsonwebtoken")
 
 const mongoose = require('mongoose');
 
-module.exports.units = (req,res) => {
-    console.log(defaultUnitsAndConversions)
-    return res.status(200).send({response: defaultUnitsAndConversions})
+module.exports.getUnits = async (req,res) => {
+    const tenantUnits =  await UnitService.getUnits(req.tenantModel.unitModel)
+
+    const allUnits = getPlainUnits(defaultUnitsAndConversions).concat(tenantUnits);
+
+    return res.status(200).send({response: allUnits})
 }
 
 module.exports.login = async(req,res) => {
