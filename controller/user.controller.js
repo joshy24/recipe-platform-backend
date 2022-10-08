@@ -23,6 +23,8 @@ const mongoose = require('mongoose');
 module.exports.getUnits = async (req,res) => {
     const tenantUnits =  await UnitService.getUnits(req.tenantModel.unitModel)
 
+    console.log({tenenatUnits})
+
     const allUnits = getPlainUnits(defaultUnitsAndConversions).concat(tenantUnits);
 
     return res.status(200).send({response: allUnits})
