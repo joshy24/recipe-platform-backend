@@ -21,7 +21,7 @@ const jwt = require("jsonwebtoken")
 const mongoose = require('mongoose');
 
 module.exports.getUnits = async (req,res) => {
-    const tenantUnits =  await UnitService.getUnits(req.tenantModel.unitModel)
+    const tenantUnits =  await UnitService.getUnits(req.tenantModels.unitModel)
 
     console.log({tenenatUnits})
 
