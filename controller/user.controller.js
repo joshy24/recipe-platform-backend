@@ -28,6 +28,34 @@ module.exports.getUnits = async (req,res) => {
     return res.status(200).send({response: allUnits})
 }
 
+module.exports.addUnit = async (req,res) => {
+    const [units] = req.body
+
+    if(!units || units.length == 0){
+        return res.status(400).send({response: "bad request"})
+    }
+
+    const names = [];
+    const abbreviations = [];
+
+    units.map(aUnit => {
+        names.push(aUnit.name)
+        abbreviations.push(aUnit.abbreviation)
+    })
+
+    const abbreviationsCount = UnitService.countUnitByAbbreviations(abbreviations, req.tenantModels.unitModel)
+
+    const namesCount = UnitService.countUnitByAbbreviations(names, req.tenantModels.unitModel)
+
+    if(abbreviationsCount > 0 || namesCount > 0){
+        return res.status(400).send({response: "records exist"})
+    }
+   
+    
+
+    return res.status(200).send({response: allUnits})
+}
+
 module.exports.login = async(req,res) => {
     const {email, password} = req.body
 
