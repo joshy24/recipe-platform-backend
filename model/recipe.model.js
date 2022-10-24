@@ -20,9 +20,12 @@ var schema = new Schema({
     category: {
         type: String,
     },
-    yield:{
+    yield: {
         amount: Number,
-        unit: String
+        unit: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Unit'
+        }
     }, 
     created: {
         type: Date,
@@ -35,6 +38,10 @@ var schema = new Schema({
         },
         quantity: {
             type: Number,
+        },
+        unit: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Unit'
         }
     }]
 })

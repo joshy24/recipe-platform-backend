@@ -8,9 +8,11 @@ const UnitService = require("../service/unit.service")
 const TenantService = require("../service/tenant.service")
 const TenantModels = require("../modules/tenantModels.module")
 
+const getTenantModels = require('../modules/tenantDB.module');
+
 const { MATERIAL, INGREDIENT } = require("../modules/constants.module")
 
-const { getPriceOfQuantity, defaultUnitsAndConversions, getPlainUnits } = require("../modules/utils")
+const { getPriceOfQuantity, defaultUnitsAndConversions, getPlainUnits, isDefaultUnit, findDefaultUnit } = require("../modules/utils")
 
 const bcrypt = require("bcryptjs")
 
@@ -20,41 +22,279 @@ const jwt = require("jsonwebtoken")
 
 const mongoose = require('mongoose');
 
+
+
+/*
+Units
+*/
+
 module.exports.getUnits = async (req,res) => {
-    const tenantUnits =  await UnitService.getUnits(req.tenantModels.unitModel)
-
-    const allUnits = getPlainUnits(defaultUnitsAndConversions).concat(tenantUnits);
-
-    return res.status(200).send({response: allUnits})
+    try{
+        const allUnits =  await UnitService.getUnits(req.tenantModels.unitModel)
+        
+        return res.status(200).send({response: allUnits})
+    }
+    catch(err){
+        console.log(err)
+        return res.status(500).send({response: err.message})
+    }
 }
 
-module.exports.addUnit = async (req,res) => {
-    const [units] = req.body
+
+module.exports.createUnit = async (req,res) => {
+    const {unit} = req.body
+
+    if(!unit){
+        return res.status(400).send({response: "bad request"})
+    }
+
+    try{
+        const abbreviationsCount = await UnitService.countUnitByAbbreviations([unit.abbreviation], req.tenantModels.unitModel)
+
+        const namesCount = await UnitService.countUnitByAbbreviations([unit.name], req.tenantModels.unitModel)
+
+        if(abbreviationsCount > 0 || namesCount > 0){
+            return res.status(400).send({response: "records exist"})
+        }
+
+        //Create unit
+
+        const creationResult =  await UnitService.createUnit(unit, req.tenantModels.unitModel)
+
+        console.log(`Unit created for ${req.tenant._id} with result - ${creationResult}`)
+
+        return res.status(200).sendO({response: creationResult ? "success" : "failure"})
+        
+    }
+    catch(err){
+        return res.status(500).send({response: err.message})
+    };
+}
+
+
+/*module.exports.createUnit = async (req,res) => {
+    const {units} = req.body
 
     if(!units || units.length == 0){
         return res.status(400).send({response: "bad request"})
     }
 
-    const names = [];
-    const abbreviations = [];
+    try{
+        const names = [];
+        const abbreviations = [];
 
-    units.map(aUnit => {
-        names.push(aUnit.name)
-        abbreviations.push(aUnit.abbreviation)
-    })
+        units.map(aUnit => {
+            names.push(aUnit.name)
+            abbreviations.push(aUnit.abbreviation)
+        })
 
-    const abbreviationsCount = UnitService.countUnitByAbbreviations(abbreviations, req.tenantModels.unitModel)
+        //Check if units exist in db
 
-    const namesCount = UnitService.countUnitByAbbreviations(names, req.tenantModels.unitModel)
+        const abbreviationsCount = await UnitService.countUnitByAbbreviations(abbreviations, req.tenantModels.unitModel)
 
-    if(abbreviationsCount > 0 || namesCount > 0){
-        return res.status(400).send({response: "records exist"})
-    }
-   
+        const namesCount = await UnitService.countUnitByAbbreviations(names, req.tenantModels.unitModel)
+
+        if(abbreviationsCount > 0 || namesCount > 0){
+            return res.status(400).send({response: "records exist"})
+        }
+
+
+        //Check if units are default units
+
+        const plainDefaultUnits = getPlainUnits(defaultUnitsAndConversions)
+
+        units.forEach(aUnit => {
+            if(isDefaultUnit(aUnit, plainDefaultUnits)){
+                return res.status(400).send({response: "records exists"})
+            }
+        })
+
+
+        //Create parent unit and hold parentId
+
+        let parentId = null
+
+        units.every(async unitToCreate => {
+            if(unitToCreate.isParent){
+                const createdUnit = await UnitService.createUnit(unitToCreate, req.tenantModels.unitModel)
+
+                parentId = createdUnit._id
+                return false;
+            }
+        })
+
+        
+        //Set parentId for each child unit
+
+        if(parentId){
+            const childUnitsToCreate = units.map(async unitToCreate => {
+                if(!unitToCreate.isParent){
+                    return {...unitToCreate, parentId: parentUnit._id}
+                }
+            })
+        }
     
+        //Create child units
 
-    return res.status(200).send({response: allUnits})
+        const createdUnitsDone = await UnitService.createManyUnits(childUnitsToCreate, req.tenantModels.unitModel)
+
+        console.log(createdUnitsDone)
+
+        return res.status(200).send({response: createdUnitsDone})
+    }
+    catch(err){
+        return res.status(500).send({response: err.message})
+    }
 }
+
+module.exports.createChildUnit = async (req,res) => {
+    const {parentId, childUnit} = req.body
+
+    if(!parentId || !childUnit){
+        return res.status(400).send({response: "bad request"})
+    }
+
+    try{
+        const parentUnit = await UnitService.getUnit(getUnit, req.tenantModels.unitModel)
+
+        if(parentUnit){
+            
+            //Check if unit exist
+
+            const abbreviationsCount = await UnitService.countUnitByAbbreviations([childUnit.abbreviation], req.tenantModels.unitModel)
+
+            const namesCount = await UnitService.countUnitByAbbreviations([childUnit.name], req.tenantModels.unitModel)
+
+            if(abbreviationsCount > 0 || namesCount > 0){
+                return res.status(400).send({response: "records exist"})
+            }
+
+            //Check if unit is one of default units
+            const plainDefaultUnits = getPlainUnits(defaultUnitsAndConversions)
+
+            if(isDefaultUnit(childUnit, plainDefaultUnits)){
+                return res.status(400).send({response: "records exists"})
+            }
+
+            //Create child unit
+            await UnitService.createUnit({...childUnit, parentId: parentUnit._id}, req.tenantModels.unitModel)
+
+            return res.status(200).send({response: "success"})
+        }
+
+        return res.status(400).send({response: "bad request"})
+    }
+    catch(err){
+        return res.status(500).send({response: err.message})
+    }
+}*/
+
+module.exports.deleteUnit = async(req,res) => {
+    const {unitId} = req.body
+
+    if(!unitId){
+        return res.status(400).send({response: "bad request"})
+    }
+
+    try{
+        const deletedUnit = await UnitService.deleteUnit(unitId, req.tenantModels.unitModel)
+
+        return res.status(200).send({response: deletedUnit})
+    }
+    catch(err){
+        return res.status(500).send({response: err.message})
+    }
+}
+
+module.exports.editUnit = async (req,res) => {
+    const {name, abbreviation, amount, parent, isBase, _id} = req.body
+
+    if(!_id || !name || !abbreviation || !amount || !parent || !isBase){
+        return res.status(400).send({response: "bad request"})
+    }
+
+    try{
+        const abbreviationsCount = await UnitService.countUnitByAbbreviations([abbreviation], req.tenantModels.unitModel)
+
+        const namesCount = await UnitService.countUnitByAbbreviations([name], req.tenantModels.unitModel)
+
+        if(abbreviationsCount > 0 || namesCount > 0){
+            return res.status(400).send({response: "records exist"})
+        }
+
+        //Check if units are default units
+
+        defaultUnitsAndConversions.forEach(defaultUnit => {
+            if(name == defaultUnit.name || abbreviation == defaultUnit.abbreviation){
+                return res.status(400).send({response: "records exist"})
+            }
+        })
+
+        let updatedUnit = await UnitService.updateUnit(_id, {name, abbreviation, amount, parent, isBase}, req.tenantModels.unitModel)
+    
+        return res.status(200).send({updatedUnit})
+    }
+    catch(err){
+        return res.status(500).send({response: err})
+    }
+}
+
+
+module.exports.unitIngredients = async(req,res) => {
+    const {ingredient_id} = req.query
+
+    try{
+        const ingredient = await IngredientService.getIngredientFromId(ingredient_id, req.tenantModels.ingredientModel)
+
+        if(!ingredient){
+            res.status(400).send({response: "ingredient not found"})
+        }
+
+        const foundUnit = findDefaultUnit(ingredient.purchase_quantity.unit)
+
+        if(!foundUnit){
+            foundUnit = await UnitService.getUnit(ingredient.purchase_quantity.unit, req.tenantModels.unitModel)
+        }
+
+        if(!foundUnit){
+            return res.status(400).send({response: "unit not found"})
+        }
+
+        if(foundUnit.isBase){
+            //We can query the db with all the units with that base unit id or string
+            //We first need to know if its a default unit or not so we can either use the abbreviation or _id
+
+            const allUnits = await UnitService.getUnitsByParent(foundUnit._id, req.tenantModels.unitModel);
+
+            //Lastly we add the base unit itself
+            const finalResult = [foundUnit].concat(allunits)
+
+            return res.status(200).send({response: finalResult})
+        }
+
+        //We move on to find all the units with the parent in foundUnit
+        const allUnits = await UnitService.getUnitsByParent(foundUnit.parent, req.tenantModels.unitModel);
+
+        //Lastly we find the base unit itself
+        const foundParent = await UnitService.getUnit(foundUnit.parent, req.tenantModels.unitModel);
+
+        const finalResult = [foundParent].concat(allUnits)
+
+        return res.status(200).send({response: finalResult})
+    }   
+    catch(err){
+        return res.status(500).send({response: err})
+    }
+}
+
+
+
+
+
+
+/*
+Account
+*/
 
 module.exports.login = async(req,res) => {
     const {email, password} = req.body
@@ -120,6 +360,32 @@ module.exports.signup = async(req,res) => {
 
             createdTenant.tokens = null;
             createdTenant.password = null;
+
+            //insert default units for tenant
+            try{
+                const tenantModels = await getTenantModels(createdTenant._id)
+
+                const baseUnits = defaultUnitsAndConversions.filter(baseUnit => baseUnit.isBase)
+
+                const nonBaseUnits = defaultUnitsAndConversions.filter(baseUnit => !baseUnit.isBase)
+
+                const unitsInsertResult = await UnitService.createManyUnits(baseUnits, tenantModels.unitModel)
+
+                await Promise.all(unitsInsertResult.map(async insertedBaseUnit => {
+                    const aSet = nonBaseUnits.filter(nonBaseUnit => nonBaseUnit.parent.toString() === insertedBaseUnit.abbreviation.toString()).map(nonBaseUnit => {
+                        return {...nonBaseUnit, parent: insertedBaseUnit._id}
+                    })
+
+                    await UnitService.createManyUnits(aSet, tenantModels.unitModel)
+
+                    return true;
+                }))
+            }
+            catch(err){
+                console.log("Error occurred processing units with info - "+err)
+            }
+
+            console.log(`Default units inserted for tenant - ${createdTenant._id}`)
 
             return res.status(200).send({"tenant":createdTenant, "token":token, "msg": "success" });
         }
@@ -277,13 +543,20 @@ module.exports.getAllRecipes = async(req,res) => {
             
             let recipeIngredientsCost = 0;
 
-            fullIngredientObjects.map(fullIngredientObject => {
+            fullIngredientObjects.map(async fullIngredientObject => {
                 const foundIngredient = aRecipe.ingredients.find(recipeIngredient => recipeIngredient.ingredient.toString() == fullIngredientObject._id.toString())
                 
-                recipeIngredientsCost += getPriceOfQuantity(fullIngredientObject.price, fullIngredientObject.purchase_quantity.amount, foundIngredient.quantity)
+                //We need to find the unit object that both the ingredient and the ingredient added to recipe have 
+                const {entitytUnit, foundUnit}  = await getEntityQuantity(fullIngredientObject.purchase_quantity.unit, foundIngredient.unit, foundIngredient.quantity, unitModel)
+                
+                const recipeIngredientQuantity = getChosenQuantityFromEntityUnit(foundUnit.amount, entitytUnit.amount, foundIngredient.quantity)
+
+                recipeIngredientsCost += getPriceOfQuantity(fullIngredientObject.price, fullIngredientObject.purchase_quantity.amount, recipeIngredientQuantity)
             })
 
-            const newRecipeObject = {...aRecipe._doc, totalCost: recipeIngredientsCost}
+            const recipeUnit = await UnitService.getUnit(aRecipe.yield.unit, req.tenantModels.unitModel)
+
+            const newRecipeObject = {...aRecipe._doc, totalCost: recipeIngredientsCost, yield: {...aRecipe.yield, unit: recipeUnit}};
 
             return newRecipeObject
         }))
@@ -294,6 +567,58 @@ module.exports.getAllRecipes = async(req,res) => {
         console.log(err)
         return res.status(500).send({response: err})
     }
+}
+
+
+/*
+fullEntityUnit - ObjectId
+foundEntityUnit - ObjectId
+foundEntityQuantity - Number
+unitModel - Mongoose Model
+*/
+const getEntityQuantity = async(fullEntityUnit, foundEntityUnit, foundEntityQuantity, unitModel) => {
+    if(entitytUnit.abbreviation == foundUnit.abbreviation){
+        return foundEntityQuantity
+    }
+
+     //1. Ingredient unit
+    let entitytUnit = await UnitService.getUnit(fullEntityUnit, unitModel)
+
+    if(!entitytUnit){
+        console.error("Error retreiving unit for ingredient from both default and DB with unit string - "+fullEntityUnit)
+    }
+
+
+    //2. Ingredient Added to Recipe
+    let foundUnit = await UnitService.getUnit(foundEntityUnit, unitModel)
+
+    if(!foundUnit){
+        console.error("Error retreiving unit for found ingredient from both default and DB with unit string - "+foundEntityUnit)
+    }
+
+    return {entitytUnit, foundUnit}
+}
+
+//Get the units that are associated with an entity(ingredient, recipe etc), units include base unit and all its children
+const getEntityUnits = async(entityUnit, entityModel) => {
+   
+    if(entityUnit.isBase){
+        //We can query the db with all the units with that base unit id or string
+        //We first need to know if its a default unit or not so we can either use the abbreviation or _id
+        let  allUnits = await UnitService.getUnitsByParent(entityUnit._id, entityModel);
+
+        //Lastly we add the base unit itself
+
+        return [entityUnit].concat(allUnits)
+    }
+
+    //We move on to find all the units with the parent in entityUnit
+    const allUnits = await UnitService.getUnitsByParent(entityUnit.parent, entityModel);
+
+    //Lastly we find the base unit itself
+    const foundParent = await UnitService.getUnit(entityUnit.parent, entityModel);
+
+    return [foundParent].concat(allUnits)
 }
 
 module.exports.searchRecipes = async(req,res) => {
@@ -320,10 +645,15 @@ module.exports.searchRecipes = async(req,res) => {
     
             const recipeIngredientsCost = 0;
 
-            fullIngredientObjects.map(fullIngredientObject => {
+            fullIngredientObjects.map(async fullIngredientObject => {
                 const foundIngredient = aRecipe.ingredients.find(recipeIngredient => recipeIngredient.iongredient.toString() == fullIngredientObject._id.toString())
     
-                recipeIngredientsCost += getPriceOfQuantity(fullIngredientObject.price, fullIngredientObject.purchase_quantity.amount, foundIngredient.quantity)
+                //We need to find the unit object that both the ingredient and the ingredient added to recipe have 
+                const {entitytUnit, foundUnit}  = await getEntityQuantity(fullIngredientObject.purchase_quantity.unit, foundIngredient.unit, foundIngredient.quantity)
+                
+                const recipeIngredientQuantity = getChosenQuantityFromEntityUnit(foundUnit.amount, entitytUnit.amount, foundIngredient.quantity)
+
+                recipeIngredientsCost += getPriceOfQuantity(fullIngredientObject.price, fullIngredientObject.purchase_quantity.amount, recipeIngredientQuantity)
             })
 
             const newRecipeObject = {...aRecipe._doc, totalCost: recipeIngredientsCost}
@@ -365,7 +695,9 @@ module.exports.getRecipe = async(req,res) => {
     try{
         const recipe = await RecipeService.getRecipe(id, req.tenantModels.recipeModel)
 
-        return res.status(200).send({response: recipe})
+        const recipeUnit = await UnitService.getUnit(recipe.yield.unit, req.tenantModels.unitModel)
+
+        return res.status(200).send({response: {...recipe, yield: {...recipe.yield, unit: recipeUnit}}})
     }
     catch(err){
         return res.status(500).send({response: err})
@@ -518,10 +850,18 @@ module.exports.getRecipeIngredients = async(req,res) => {
 
         const fullIngredientObjects = await IngredientService.findIngredientsFromArrayIds(recipeIngredientsIdsArray, req.tenantModels.ingredientModel, page,limit)
         
-        const recipeIngredients = fullIngredientObjects.docs.map(fullIngredientObject => {
+        const recipeIngredients = fullIngredientObjects.docs.map(async fullIngredientObject => {
             const foundIngredient = recipe.ingredients.find(recipeIngredient => recipeIngredient.ingredient.toString() == fullIngredientObject._id.toString())
+            
+            const ingredientUnit = await UnitService.getUnit(fullIngredientObject.purchase_quantity.unit, req.tenantModels.unitModel)
 
-            return {...fullIngredientObject._doc, quantity: foundIngredient.quantity, totalCost: getPriceOfQuantity(fullIngredientObject.price, fullIngredientObject.purchase_quantity.amount, foundIngredient.quantity)}
+            const ingredientUnits = await getEntityUnits(ingredientUnit, req.tenantModels.unitModel)
+
+            const {entitytUnit, foundUnit} = await getEntityQuantity(fullIngredientObject.purchase_quantity.unit, foundIngredient.unit, foundIngredient.quantity)
+
+            const recipeIngredientQuantity = getChosenQuantityFromEntityUnit(foundUnit.amount, entitytUnit.amount, foundIngredient.quantity)
+            
+            return {...fullIngredientObject._doc, units: ingredientUnits, quantity: foundIngredient.quantity, totalCost: getPriceOfQuantity(fullIngredientObject.price, fullIngredientObject.purchase_quantity.amount, recipeIngredientQuantity)}
         })
 
         return res.status(200).send({response: {...fullIngredientObjects, docs:recipeIngredients}})
@@ -554,9 +894,23 @@ module.exports.getInventory = async(req,res) => {
         if(type.toLowerCase() == "ingredients" || type.toLowerCase() == "ingredient"){
             let allIngredients = await IngredientService.getAllIngredients(req.tenantModels.ingredientModel, {limit, page}, searchTerm, status)
             
-            const editedList = getQuantityInStockForInventoryList(allIngredients.docs)
-            
-            return res.status(200).send({response: {...allIngredients, docs: editedList}})
+            if(allIngredients.docs && allIngredients.docs.length > 0){
+                const allIngredientDocs = await Promise.all(allIngredients.docs.map(async ingredientItem => {
+                    const ingredientUnit = await UnitService.getUnit(ingredientItem.purchase_quantity.unit, req.tenantModels.unitModel)
+
+                    const ingredientUnits = await getEntityUnits(ingredientUnit, req.tenantModels.unitModel)
+
+                    const purchase_quantity = {...ingredientItem.purchase_quantity, unit: ingredientUnit}
+
+                    return {...ingredientItem._doc, purchase_quantity, units:ingredientUnits, costOfQuantityInStock: getPriceOfQuantity(ingredientItem.price, ingredientItem.purchase_quantity.amount, ingredientItem.quantity_in_stock)}
+                }))
+
+                console.log(allIngredientDocs)
+    
+                return res.status(200).send({response: {...allIngredients, docs: allIngredientDocs}})
+            }
+
+            return res.status(200).send({response: {...allIngredients, docs: []}})
         }
         
         if(type.toLowerCase() == "materials" || type.toLowerCase() == "material"){
@@ -602,7 +956,7 @@ module.exports.searchInventory = async(req,res) => {
 
 const getQuantityInStockForInventoryList = (inventoryItems) => {
     return inventoryItems.map(inventoryItem => {
-        return {...inventoryItem._doc, costOfQuantityInStock: getPriceOfQuantity(inventoryItem.price, inventoryItem.purchase_quantity.amount, inventoryItem.quantity_in_stock)}
+        return {...inventoryItem._doc}
     })
 }
 
@@ -647,7 +1001,7 @@ module.exports.deleteInventoryMaterial = async(req,res) => {
 module.exports.addIngredientsToInventory = async (req,res) => {
     //This should be multiple igredients but will work with one for now till we figure it out
     const {ingredient} = req.body
-    
+
     if(!ingredient){
         return res.status(400).send({response: "bad request"})
     }
@@ -655,7 +1009,7 @@ module.exports.addIngredientsToInventory = async (req,res) => {
     try{
         ingredient.purchase_quantity = {
             amount: ingredient.purchase_quantity,
-            unit: ingredient.purchase_size
+            unit: ingredient.purchase_unit
         }
 
         const createdIngredient = await IngredientService.createIngredient(ingredient, req.tenantModels.ingredientModel);
@@ -745,32 +1099,36 @@ module.exports.getIngredientsToAdd = async(req,res) => {
             return res.status(404).send({response: "recipe not found"})
         }
 
+        let ingredients_found = null;
+
         if(recipe.ingredients.length > 0){
             const recipe_ingredients_ids = recipe.ingredients.map(ingredient => {
                 return ingredient.ingredient
             })
             
-            if(page && limit){
-                const ingredients_found = await IngredientService.getIngredientsNotInArrayWithSearchTerm(recipe_ingredients_ids, page, limit, req.tenantModels.ingredientModel, search_term)
-               
-                return res.status(200).send({response: ingredients_found})
-            }
-
-            const ingredients_found = await IngredientService.getIngredientsNotInArray(recipe_ingredients_ids, req.tenantModels.ingredientModel)
-        
-            return res.status(200).send({response: ingredients_found})
+            ingredients_found = await IngredientService.getIngredientsNotInArrayWithSearchTerm(recipe_ingredients_ids, page, limit, req.tenantModels.ingredientModel, search_term)
         }
         else{
-            if(page && limit){
-                const ingredients_found = await IngredientService.getAllIngredientsToAddSearch(page, limit, req.tenantModels.ingredientModel, search_term)
-                
-                return res.status(200).send({response: ingredients_found})
-            }
-
-            const ingredients_found = await IngredientService.getAllIngredientsToAdd(req.tenantModels.ingredientModel)
-
-            return res.status(200).send({response: ingredients_found})
+            ingredients_found = await IngredientService.getAllIngredientsToAddSearch(page, limit, req.tenantModels.ingredientModel, search_term)
         }
+
+        if(ingredients_found && ingredients_found.docs.length > 0){
+            
+            const allIngredients = await Promise.all(ingredients_found.docs.map(async ingredient_found => {
+                const ingredientUnit = await UnitService.getUnit(ingredient_found.purchase_quantity.unit, req.tenantModels.unitModel)
+
+                const ingredientUnits = await getEntityUnits(ingredientUnit, req.tenantModels.unitModel)
+
+                const purchase_quantity = {...ingredient_found.purchase_quantity, unit: ingredientUnit}
+
+                return {...ingredient_found._doc, units: ingredientUnits, purchase_quantity}
+            }))
+
+            return res.status(200).send({response: {...ingredients_found, docs: allIngredients}})
+        }
+
+        return res.status(200).send({response: ingredients_found})
+
     }
     catch(err){
         console.log(err)

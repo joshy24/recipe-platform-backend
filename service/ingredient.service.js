@@ -1,3 +1,4 @@
+const ingredientModel = require("../model/ingredient.model")
 
 module.exports.createIngredient = async(data, IngredientModel) => {
     const ingredient = new IngredientModel(data)
@@ -44,8 +45,8 @@ module.exports.getIngredientsSearch = async(searchTerm, IngredientModel) => {
             .exec()
 }
 
-module.exports.getIngredientFromId = async(data, IngredientModel) => {
-
+module.exports.getIngredientFromId = async(id, IngredientModel) => {
+    return await ingredientModel.find({_id: id}).lean()
 }
 
 module.exports.getAllIngredientsToAdd = async(IngredientModel) => {

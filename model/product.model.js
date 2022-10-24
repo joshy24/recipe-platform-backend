@@ -34,8 +34,11 @@ const schema = new Schema({
             ref: 'Recipe'
         },
         quantity: {
-            amount: Number,
-            unit: String
+            amount: Number
+        },
+        unit: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Unit'
         }
     }],
     materials: [{
@@ -45,6 +48,10 @@ const schema = new Schema({
         },
         quantity: {
             type: Number,
+        },
+        unit: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Unit'
         }
     }]
 })

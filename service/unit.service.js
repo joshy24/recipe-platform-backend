@@ -1,15 +1,24 @@
 module.exports.createUnit = async(data, UnitModel) => {
     var unit = new UnitModel(data)
+    unit.isDefault = false;
 
     return await unit.save()
 }
 
-module.exports.createManyUnit = async(data, UnitModel) => {
+module.exports.createManyUnits = async(data, UnitModel) => {
     return await UnitModel.insertMany(data)
 }
 
 module.exports.getUnits = async(UnitModel) => {
     return await UnitModel.find({}).lean()
+}
+
+module.exports.getUnitsByParent = async(parentString, UnitModel) => {
+    return await UnitModel.find({parent: parentString}).lean()
+}
+
+module.exports.getUnit = async(unitId, UnitModel) => {
+    return await UnitModel.findOne({_id: unitId}).lean()
 }
 
 module.exports.updateUnit = async(id, new_data, UnitModel) => {

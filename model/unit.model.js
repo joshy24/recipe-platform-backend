@@ -21,14 +21,19 @@ const schema = new Schema({
         type: Number,
         required: true,
     },
-    isParent: {
+    parent: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Unit', //unit id or unit abbreviation
+        required: false
+    },
+    isDefault: {
+        default: false,
+        type: Boolean
+    },
+    isBase: {
         type: Boolean,
         required: true,
     },
-    parentId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Unit'
-    }
 }, { timestamps: true })
 
 schema.plugin(mongoosePaginate);

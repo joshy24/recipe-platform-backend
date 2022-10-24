@@ -15,11 +15,10 @@ const schema = new Schema({
     },
     purchase_quantity: {
         amount: Number,
-        unit: String
-    },
-    purchase_size: {
-        type: String,
-        required: true
+        unit: {
+            name: String,
+            value: String
+        }
     },
     price: {
         type: Number,

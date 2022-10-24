@@ -14,12 +14,20 @@ module.exports = function(router){
         userController.createUnit(req,res);
     })
 
+    router.post("/units/child", (req,res) => {
+        userController.createChildUnit(req,res);
+    })
+
     router.delete("/units", (req,res) => {
         userController.deleteUnit(req,res);
     })
 
     router.put("/units", (req,res) => {
         userController.editUnit(req,res);
+    })
+
+    router.get("/units/ingredient", (req,res) => {
+        userController.unitIngredients(req,res);
     })
 
 

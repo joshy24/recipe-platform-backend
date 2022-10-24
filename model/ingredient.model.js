@@ -15,11 +15,10 @@ const schema = new Schema({
     },
     purchase_quantity: {
         amount: Number,
-        unit: String
-    },
-    purchase_size: {
-        type: String,
-        required: true
+        unit: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Unit',
+        }
     },
     price: {
         type: Number,
