@@ -34,7 +34,7 @@ const schema = new Schema({
             ref: 'Recipe'
         },
         quantity: {
-            amount: Number
+            type: Number
         },
         unit: {
             type: mongoose.Schema.Types.ObjectId,
