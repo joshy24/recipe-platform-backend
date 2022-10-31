@@ -402,7 +402,7 @@ module.exports.signup = async(req,res) => {
 
 
 module.exports.updateAccount = async(req,res) => {
-    const { firstname, lastname, phone_number, email} = req.body
+    const { firstname, lastname, phone_number, email, profit_margin} = req.body
 
     if(!firstname || !lastname || !phone_number || !email){
         return res.status(400).send({response: "bad request"});
@@ -425,7 +425,7 @@ module.exports.updateAccount = async(req,res) => {
             }
         }
 
-        const newTenantDetails = {...req.tenant, firstname, lastname, phone_number, email}
+        const newTenantDetails = {...req.tenant._doc, firstname, lastname, phone_number, email, profit_margin}
 
         const token = jwt.sign({tenantId: newTenantDetails._id, firstname: newTenantDetails.firstname, lastname: newTenantDetails.lastname}, config.secret, {issuer: "Profit Table", audience: "Tenant", expiresIn: 60*60*24*500, algorithm: "HS256"});
                 
@@ -1295,7 +1295,15 @@ module.exports.getAllProducts = async(req,res) => {
                     recipeCost += getPriceOfQuantity(ingredientObject.price, ingredientObject.purchase_quantity.amount, recipeIngredientQuantity);
                 }))
 
-                allRecipesCost += recipeCost * (foundRecipe.quantity.amount && foundRecipe.quantity.amount > 0 ? foundRecipe.quantity.amount : 1)
+                const entityQuantity  = await getEntityQuantity(aProductRecipe.yield.unit, foundRecipe.unit, foundRecipe.quantity, req.tenantModels.unitModel)
+
+                const {entitytUnit, foundUnit} = entityQuantity;
+
+                const productRecipeQuantity = getChosenQuantityFromEntityUnit(foundUnit.amount, entitytUnit.amount, foundRecipe.quantity)
+
+                //allRecipesCost += recipeCost * (foundRecipe.quantity.amount && foundRecipe.quantity.amount > 0 ? foundRecipe.quantity.amount : 1)
+
+                allRecipesCost += getPriceOfQuantity(recipeCost, aProductRecipe.yield.amount, productRecipeQuantity);
 
                 return true;
             }))
@@ -1881,13 +1889,27 @@ module.exports.getOrderProducts = async(req,res) => {
                 
                 let recipeCost = 0
 
-                ingredientObjects.map(ingredientObject => {
+                await Promise.all(ingredientObjects.map(async ingredientObject => {
                     const foundIngredient = aProductRecipe.ingredients.find(anIngredient => anIngredient.ingredient.toString() === ingredientObject._id.toString())
 
-                    recipeCost += getPriceOfQuantity(ingredientObject.price, ingredientObject.purchase_quantity.amount, (foundIngredient.quantity ? foundIngredient.quantity : 1)) 
-                })
+                    const entityQuantity  = await getEntityQuantity(ingredientObject.purchase_quantity.unit, foundIngredient.unit, foundIngredient.quantity, req.tenantModels.unitModel)
 
-                allRecipesCost += recipeCost * (foundRecipe.quantity.amount && foundRecipe.quantity.amount > 0 ? foundRecipe.quantity.amount : 1)
+                    const {entitytUnit, foundUnit} = entityQuantity;
+
+                    const recipeIngredientQuantity = getChosenQuantityFromEntityUnit(foundUnit.amount, entitytUnit.amount, foundIngredient.quantity)
+
+                    recipeCost += getPriceOfQuantity(ingredientObject.price, ingredientObject.purchase_quantity.amount, recipeIngredientQuantity) 
+                }))
+
+                const entityQuantity  = await getEntityQuantity(aProductRecipe.yield.unit, foundRecipe.unit, foundRecipe.quantity, req.tenantModels.unitModel)
+
+                const {entitytUnit, foundUnit} = entityQuantity;
+
+                const productRecipeQuantity = getChosenQuantityFromEntityUnit(foundUnit.amount, entitytUnit.amount, foundRecipe.quantity)
+
+                //allRecipesCost += recipeCost * (foundRecipe.quantity.amount && foundRecipe.quantity.amount > 0 ? foundRecipe.quantity.amount : 1)
+
+                allRecipesCost += getPriceOfQuantity(recipeCost, aProductRecipe.yield.amount, productRecipeQuantity);
 
                 return true;
             }))
@@ -2251,20 +2273,20 @@ module.exports.getProfitTableProductChanges = async(req,res) => {
 
         if(type.toLowerCase() == INGREDIENT || type.toLowerCase().includes(INGREDIENT)){
             //Pull all recipes from the list of ingredients ids
-            const recipes = await RecipeService.getRecipesFromIngredientsArray(newListOfMongooseIds, req.tenantModels.recipeModel) 
+            const recipes = await RecipeService.getRecipesFromIngredientsArray(changeListIds, req.tenantModels.recipeModel) 
 
             if(recipes && recipes.length > 0){
                 const recipesIdsArray = recipes.map(aRecipe => {
-                    return aRecipe.recipe
+                    return aRecipe._id
                 })
+
+                console.log(recipesIdsArray)
 
                 //find all products based on the list of recipes ids found above
                 products = await ProductService.getProductsFromRecipesArray(recipesIdsArray, req.tenantModels.productModel) 
             }
         }
-
         
-
         if(products && products.length > 0){
             const updatedProducts = await Promise.all(products.map(async aProduct => {
                 //For each product get the total cost with profit margin and without profit margin
@@ -2295,22 +2317,29 @@ module.exports.getProfitTableProductChanges = async(req,res) => {
                             //find all full ingredient objects
                             const allIngredientObjects = await IngredientService.findIngredientsFromArrayIdsNoPagination(ingredientIds, req.tenantModels.ingredientModel)
     
-                            const allIngredientsCost = allIngredientObjects.reduce( (acc, allIngredientObject) => {
-                                 const aFoundIngredient = allProductRecipe.ingredients.find(anIngredient => anIngredient.ingredient.toString() === allIngredientObject._id.toString())
+                            const allIngredientsCost = await Promise.all(allIngredientObjects.reduce(async(acc, allIngredientObject) => {
+                                const aFoundIngredient = allProductRecipe.ingredients.find(anIngredient => anIngredient.ingredient.toString() === allIngredientObject._id.toString())
                           
-                                 if(type.toLowerCase() == INGREDIENT || type.toLowerCase().includes(INGREDIENT)){
-                                     if(changeListIds[0].toString() === allIngredientObject._id.toString()){
+                                if(type.toLowerCase() == INGREDIENT || type.toLowerCase().includes(INGREDIENT)){
+                                    if(changeListIds[0].toString() === allIngredientObject._id.toString()){
                                         cost_diff_found = (Object.values(aChangeList)[0] * aFoundIngredient.quantity) - (allIngredientObject.price * aFoundIngredient.quantity)
-                                     }
-                                 }
+                                    }
+                                }
 
-                                 return acc + getPriceOfQuantity(allIngredientObject.price, allIngredientObject.purchase_quantity.amount, aFoundIngredient.quantity)
-                            },0)
-                        
+                                const entityQuantity  = await getEntityQuantity(allIngredientObject.purchase_quantity.unit, aFoundIngredient.unit, aFoundIngredient.quantity, req.tenantModels.unitModel)
+
+                                const {entitytUnit, foundUnit} = entityQuantity;
+
+                                const recipeIngredientQuantity = getChosenQuantityFromEntityUnit(foundUnit.amount, entitytUnit.amount, aFoundIngredient.quantity)
+
+                                return acc + getPriceOfQuantity(allIngredientObject.price, allIngredientObject.purchase_quantity.amount, recipeIngredientQuantity)
+                            },0))
+
                             //join the total cost of the recipe to the total cost of all recipes
-                            
                             costOfRecipes += (recipeQuantity * allIngredientsCost);
                         }
+
+                        console.log({costOfRecipes})
 
                         return true
                     }))
