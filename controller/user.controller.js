@@ -1741,7 +1741,6 @@ module.exports.getProductMaterials = async(req,res) => {
             const arrayOfUpdatedFullMaterials = arrayOfFullMaterialObjects.docs.map(fullMaterialObject => {
                 const aFoundMaterial = product.materials.find(material => material.material.toString() === fullMaterialObject._id.toString());
                 const foundUnit = defaultMaterialUnits.filter(defaultUnit => defaultUnit._id == aFoundMaterial.unit).shift()
-
                 const totalClost = calculateCostOfAddedMaterial(fullMaterialObject, aFoundMaterial);
                 return {...fullMaterialObject._doc, quantity: aFoundMaterial.quantity, totalCost: totalClost, purchase_quantity: {...fullMaterialObject._doc.purchase_quantity, unit: foundUnit}}
             })
@@ -1944,8 +1943,9 @@ module.exports.getOrderProducts = async(req,res) => {
 
             await Promise.all(productMaterialObjects.map(aProductMaterial => {
                 const foundMaterial = productFound.materials.find(aMaterial => aMaterial.material.toString() === aProductMaterial._id.toString())
-
-                allMaterialsCost += getPriceOfQuantity(aProductMaterial.price, aProductMaterial.purchase_quantity.amount, (foundMaterial.quantity ? foundMaterial.quantity : 1))
+                //const foundUnit = defaultMaterialUnits.filter(defaultUnit => defaultUnit._id == aFoundMaterial.unit).shift()
+                const totalClost = calculateCostOfAddedMaterial(aProductMaterial, foundMaterial);
+                allMaterialsCost += totalClost
             }))
 
             //console.log({allMaterialsCost, allRecipesCost, labourCost: productFound._doc.labour_cost, overheadCost: productFound._doc.overhead_cost})
@@ -2385,7 +2385,9 @@ module.exports.getProfitTableProductChanges = async(req,res) => {
                             }
                         }
 
-                        return acc + getPriceOfQuantity(aProductMaterial.price, aProductMaterial.purchase_quantity.amount, aFoundMaterial.quantity)
+                        const totalClost = calculateCostOfAddedMaterial(aProductMaterial, aFoundMaterial);
+                        
+                        return acc + totalClost
                     }, 0)
                 }
 
