@@ -12,7 +12,7 @@ const getTenantModels = require('../modules/tenantDB.module');
 
 const { MATERIAL, INGREDIENT } = require("../modules/constants.module")
 
-const { getPriceOfQuantity, defaultUnitsAndConversions, getPlainUnits, isDefaultUnit, findDefaultUnit, getChosenQuantityFromEntityUnit } = require("../modules/utils")
+const { defaultMaterialUnits, getPriceOfQuantity, defaultUnitsAndConversions, getPlainUnits, isDefaultUnit, findDefaultUnit, getChosenQuantityFromEntityUnit, calculateCostOfAddedMaterial } = require("../modules/utils")
 
 const bcrypt = require("bcryptjs")
 
@@ -27,6 +27,10 @@ const mongoose = require('mongoose');
 /*
 Units
 */
+
+module.exports.getMaterialUnits = (req,res) => {
+    return res.status(200).send({response: defaultMaterialUnits})
+}
 
 module.exports.getUnits = async (req,res) => {
     try{
@@ -925,8 +929,18 @@ module.exports.getInventory = async(req,res) => {
             let allMaterials = await MaterialService.getAllMaterials(req.tenantModels.materialModel, {limit, page}, searchTerm,  status)
             
             const editedList = getQuantityInStockForInventoryList(allMaterials.docs)
-            
-            return res.status(200).send({response: {...allMaterials, docs: editedList}})
+
+            const newItemsList = editedList.map(editedListItem => {
+                const foundUnit = defaultMaterialUnits.filter(aUnit => aUnit._id == editedListItem.purchase_quantity.unit).shift()
+
+                if(foundUnit){
+                    return {...editedListItem, purchase_quantity: {...editedListItem.purchase_quantity, unit: foundUnit}}
+                }
+
+                return editedListItem
+            })
+        
+            return res.status(200).send({response: {...allMaterials, docs: newItemsList}})
         }
     }
     catch(err){
@@ -964,7 +978,9 @@ module.exports.searchInventory = async(req,res) => {
 
 const getQuantityInStockForInventoryList = (inventoryItems) => {
     return inventoryItems.map(inventoryItem => {
-        return {...inventoryItem._doc}
+        const item = {...inventoryItem._doc}
+        
+        return {...item, costOfQuantityInStock: getPriceOfQuantity(item.price, item.purchase_quantity.amount, item.quantity_in_stock)}
     })
 }
 
@@ -1033,6 +1049,8 @@ module.exports.addMaterialsToInventory = async(req,res) => {
     //This should be multiple ingredients but will work with one for now till we figure it out
     const {material} = req.body
 
+    console.log(material)
+
     if(!material){
         return res.status(400).send({response: "bad request"})
     }
@@ -1040,7 +1058,7 @@ module.exports.addMaterialsToInventory = async(req,res) => {
     try{
         material.purchase_quantity = {
             amount: material.purchase_quantity,
-            unit: material.purchase_size
+            unit: material.purchase_unit._id
         }
 
         const createdMaterial = await MaterialService.createMaterial(material, req.tenantModels.materialModel);
@@ -1722,8 +1740,10 @@ module.exports.getProductMaterials = async(req,res) => {
 
             const arrayOfUpdatedFullMaterials = arrayOfFullMaterialObjects.docs.map(fullMaterialObject => {
                 const aFoundMaterial = product.materials.find(material => material.material.toString() === fullMaterialObject._id.toString());
+                const foundUnit = defaultMaterialUnits.filter(defaultUnit => defaultUnit._id == aFoundMaterial.unit).shift()
 
-                return {...fullMaterialObject._doc, quantity: aFoundMaterial.quantity, totalCost: getPriceOfQuantity(fullMaterialObject.price, fullMaterialObject.purchase_quantity.amount, aFoundMaterial.quantity)}
+                const totalClost = calculateCostOfAddedMaterial(fullMaterialObject, aFoundMaterial);
+                return {...fullMaterialObject._doc, quantity: aFoundMaterial.quantity, totalCost: totalClost, purchase_quantity: {...fullMaterialObject._doc.purchase_quantity, unit: foundUnit}}
             })
 
             return res.status(200).send({response: {...arrayOfFullMaterialObjects, docs: arrayOfUpdatedFullMaterials}})

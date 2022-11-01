@@ -1,10 +1,34 @@
-module.exports.getPriceOfQuantity = (originalPrice, originalQuantity, requiredQuantity) => {
+
+const getPriceOfQuantity = (originalPrice, originalQuantity, requiredQuantity) => {
     return ( originalPrice * requiredQuantity ) / originalQuantity
 }
+
+module.exports.getPriceOfQuantity = getPriceOfQuantity
 
 module.exports.getChosenQuantityFromEntityUnit = (childAmount, entityAmount, chosenAmount) => {
     return ( entityAmount * chosenAmount ) / childAmount
 }
+
+
+const defaultMaterialUnits = [
+    {
+        _id: "1",
+        name: "Packets",
+        abbreviation: "pck",
+        isDefault: true,
+        isBase: true,
+    },
+    {
+        _id: "2",
+        name: "Pieces",
+        abbreviation: "pc",
+        isDefault: true,
+        isBase: false,
+    }
+]
+
+module.exports.defaultMaterialUnits = defaultMaterialUnits
+
 
 const defaultUnits = [
     {
@@ -70,3 +94,29 @@ module.exports.isDefaultUnit = (unit, plainDefaultUnits) => {
     return false;
 }
 
+
+
+
+module.exports.calculateCostOfAddedMaterial = (fullMaterial, foundMaterial) => {
+    const foundQuantity = foundMaterial.quantity
+
+    const fullQuantity = fullMaterial.purchase_quantity.amount
+
+    const fullPrice = fullMaterial.price
+
+    if(foundMaterial.unit == fullMaterial.purchase_quantity.unit){
+        return getPriceOfQuantity(fullPrice, fullQuantity, foundQuantity)
+    }
+
+    const piecesQuantity =  fullMaterial.pieces
+
+    const foundUnit = defaultMaterialUnits.filter(defaultUnit => defaultUnit._id == foundMaterial.unit).shift()
+
+    //const fullUnit = defaultMaterialUnits.filter(defaultUnit => defaultUnit._id == fullMaterial.purchase_quantity.unit).shift()
+   
+    if(foundUnit.name.toLowerCase() == "packets"){
+        return (fullPrice * foundQuantity) / (fullQuantity/piecesQuantity)
+    }
+
+    return (fullPrice * foundQuantity) / (fullQuantity * piecesQuantity)
+}

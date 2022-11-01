@@ -50,8 +50,7 @@ const schema = new Schema({
             type: Number,
         },
         unit: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'Unit'
+            type: String
         }
     }]
 })

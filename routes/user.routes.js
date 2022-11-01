@@ -10,6 +10,10 @@ module.exports = function(router){
         userController.getUnits(req,res);
     })
 
+    router.get("/units/material", (req,res) => {
+        userController.getMaterialUnits(req,res);
+    })
+
     router.post("/units", (req,res) => {
         userController.createUnit(req,res);
     })

@@ -16,8 +16,7 @@ const schema = new Schema({
     purchase_quantity: {
         amount: Number,
         unit: {
-            name: String,
-            value: String
+            type: String,
         }
     },
     price: {
@@ -34,6 +33,10 @@ const schema = new Schema({
     },
     lowLevel:{
         type: Number
+    },
+    pieces: {
+        type: Number,
+        required: true
     }
 })
 
