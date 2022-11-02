@@ -18,7 +18,7 @@ var schema = new Schema({
         type: String,
     },
     phone_number: {
-        type: Number,
+        type: String,
         maxlength: 30,
         minlength: 8,
         unique: true
