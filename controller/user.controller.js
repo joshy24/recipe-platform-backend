@@ -1536,9 +1536,9 @@ module.exports.deleteProductRecipe = async(req,res) => {
 }
 
 module.exports.editProductMaterial = async(req,res) => {
-    const {material_id, quantity, id} = req.body
+    const {material_id, quantity, unit, id} = req.body
 
-    if(!id || !material_id || !quantity){
+    if(!id || !material_id || !quantity || !unit){
         return res.status(400).send({response: "bad request"})
     }
 
@@ -1552,6 +1552,7 @@ module.exports.editProductMaterial = async(req,res) => {
         const newMaterialsArray = product.materials.map(material => {
             if (material.material.toString() === material_id.toString()) {
                 material.quantity = quantity;
+                material.unit = unit
 
                 return material;
             }
