@@ -12,7 +12,7 @@ const getTenantModels = require('../modules/tenantDB.module');
 
 const { MATERIAL, INGREDIENT } = require("../modules/constants.module")
 
-const { defaultMaterialUnits, getPriceOfQuantity, defaultUnitsAndConversions, getPlainUnits, isDefaultUnit, findDefaultUnit, getChosenQuantityFromEntityUnit, calculateCostOfAddedMaterial } = require("../modules/utils")
+const { defaultMaterialUnits, getPriceOfQuantity, defaultUnitsAndConversions, getPlainUnits, isDefaultUnit, findDefaultUnit, getChosenQuantityFromEntityUnit, calculateCostOfAddedMaterial, calculateDesiredQuantityFromQuantity, convertQuantityToOtherQuantity } = require("../modules/utils")
 
 const bcrypt = require("bcryptjs")
 
@@ -550,13 +550,8 @@ module.exports.getAllRecipes = async(req,res) => {
             await Promise.all(fullIngredientObjects.map(async fullIngredientObject => {
                 const foundIngredient = aRecipe.ingredients.find(recipeIngredient => recipeIngredient.ingredient.toString() == fullIngredientObject._id.toString())
                 
-                //We need to find the unit object that both the ingredient and the ingredient added to recipe have 
-                const entityQuantity  = await getEntityQuantity(fullIngredientObject.purchase_quantity.unit, foundIngredient.unit, foundIngredient.quantity, req.tenantModels.unitModel)
-                
-                const {entitytUnit, foundUnit} = entityQuantity;
+                const recipeIngredientQuantity = await calculateDesiredQuantityFromQuantity(fullIngredientObject, foundIngredient, req.tenantModels.unitModel)
 
-                const recipeIngredientQuantity = getChosenQuantityFromEntityUnit(foundUnit.amount, entitytUnit.amount, foundIngredient.quantity)
-                
                 recipeIngredientsCost += getPriceOfQuantity(fullIngredientObject.price, fullIngredientObject.purchase_quantity.amount, recipeIngredientQuantity)
             }))
 
@@ -655,11 +650,7 @@ module.exports.searchRecipes = async(req,res) => {
                 const foundIngredient = aRecipe.ingredients.find(recipeIngredient => recipeIngredient.iongredient.toString() == fullIngredientObject._id.toString())
     
                 //We need to find the unit object that both the ingredient and the ingredient added to recipe have 
-                const entityQuantity  = await getEntityQuantity(fullIngredientObject.purchase_quantity.unit, foundIngredient.unit, foundIngredient.quantity, req.tenantModels.unitModel)
-                
-                const {entitytUnit, foundUnit} = entityQuantity;
-
-                const recipeIngredientQuantity = getChosenQuantityFromEntityUnit(foundUnit.amount, entitytUnit.amount, foundIngredient.quantity)
+                const recipeIngredientQuantity = await calculateDesiredQuantityFromQuantity(fullIngredientObject, foundIngredient, req.tenantModels.unitModel)
 
                 recipeIngredientsCost += getPriceOfQuantity(fullIngredientObject.price, fullIngredientObject.purchase_quantity.amount, recipeIngredientQuantity)
             }))
@@ -867,12 +858,8 @@ module.exports.getRecipeIngredients = async(req,res) => {
 
             const ingredientUnits = await getEntityUnits(ingredientUnit, req.tenantModels.unitModel)
 
-            const entityQuantity = await getEntityQuantity(fullIngredientObject.purchase_quantity.unit, foundIngredient.unit, foundIngredient.quantity, req.tenantModels.unitModel)
+            const recipeIngredientQuantity = await calculateDesiredQuantityFromQuantity(fullIngredientObject, foundIngredient, req.tenantModels.unitModel)
 
-            const {entitytUnit, foundUnit} = entityQuantity;
-
-            const recipeIngredientQuantity = getChosenQuantityFromEntityUnit(foundUnit.amount, entitytUnit.amount, foundIngredient.quantity)
-            
             const purchase_quantity = {...fullIngredientObject.purchase_quantity, unit: ingredientUnit}
 
             return {...fullIngredientObject._doc, purchase_quantity, units: ingredientUnits, quantity: foundIngredient.quantity, totalCost: getPriceOfQuantity(fullIngredientObject.price, fullIngredientObject.purchase_quantity.amount, recipeIngredientQuantity)}
@@ -1176,32 +1163,26 @@ module.exports.getMaterialsToAdd = async(req,res) => {
             return res.status(404).send({response: "product not found"})
         }
 
+        let materials_found;
+
         if(product.materials.length > 0){
             const product_materials_ids = product.materials.map(material => {
                 return material.material
             })
 
-            if(page && limit){
-                const materials_found = await MaterialService.getMaterialsNotInArrayWithSearchTerm(product_materials_ids, page, limit, req.tenantModels.materialModel, search_term)
-               
-                return res.status(200).send({response: materials_found})
-            }
-    
-            const materials_found = await MaterialService.getMaterialsNotInArray(product_materials_ids, req.tenantModels.materialModel)
-        
-            return res.status(200).send({response: materials_found})
+            materials_found = await MaterialService.getMaterialsNotInArrayWithSearchTerm(product_materials_ids, page, limit, req.tenantModels.materialModel, search_term)
         }
         else{
-            if(page && limit){
-                const materials_found = await MaterialService.getAllMaterialsToAddSearch(page, limit, req.tenantModels.materialModel, search_term)
-               
-                return res.status(200).send({response: materials_found})
-            }
-
-            const materials_found = await MaterialService.getAllMaterialsToAdd(req.tenantModels.materialModel)
-
-            return res.status(200).send({response: materials_found})
+            materials_found = await MaterialService.getAllMaterialsToAddSearch(page, limit, req.tenantModels.materialModel, search_term) 
         }
+
+        const finalMaterials = materials_found.docs.map(materialFound => {
+            const foundUnit = defaultMaterialUnits.filter(defaultUnit => defaultUnit._id === materialFound.purchase_quantity.unit).shift()
+
+            return {...materialFound._doc, purchase_quantity: {...materialFound.purchase_quantity, unit: foundUnit}}
+        })
+
+        return res.status(200).send({response: {...materials_found, docs: finalMaterials}})
     }
     catch(err){
         console.log(err)
@@ -1304,22 +1285,12 @@ module.exports.getAllProducts = async(req,res) => {
                 await Promise.all(ingredientObjects.map(async ingredientObject => {
                     const foundIngredient = aProductRecipe.ingredients.find(anIngredient => anIngredient.ingredient.toString() === ingredientObject._id.toString())
 
-                    const entityQuantity  = await getEntityQuantity(ingredientObject.purchase_quantity.unit, foundIngredient.unit, foundIngredient.quantity, req.tenantModels.unitModel)
-                    
-                    const {entitytUnit, foundUnit} = entityQuantity;
+                    const recipeIngredientQuantity = await calculateDesiredQuantityFromQuantity(ingredientObject, foundIngredient, req.tenantModels.unitModel)
 
-                    const recipeIngredientQuantity = getChosenQuantityFromEntityUnit(foundUnit.amount, entitytUnit.amount, foundIngredient.quantity)
-                    
                     recipeCost += getPriceOfQuantity(ingredientObject.price, ingredientObject.purchase_quantity.amount, recipeIngredientQuantity);
                 }))
 
-                const entityQuantity  = await getEntityQuantity(aProductRecipe.yield.unit, foundRecipe.unit, foundRecipe.quantity, req.tenantModels.unitModel)
-
-                const {entitytUnit, foundUnit} = entityQuantity;
-
-                const productRecipeQuantity = getChosenQuantityFromEntityUnit(foundUnit.amount, entitytUnit.amount, foundRecipe.quantity)
-
-                //allRecipesCost += recipeCost * (foundRecipe.quantity.amount && foundRecipe.quantity.amount > 0 ? foundRecipe.quantity.amount : 1)
+                const productRecipeQuantity = await calculateDesiredQuantityFromQuantity(aProductRecipe, foundRecipe, req.tenantModels.unitModel)
 
                 allRecipesCost += getPriceOfQuantity(recipeCost, aProductRecipe.yield.amount, productRecipeQuantity);
 
@@ -1337,7 +1308,9 @@ module.exports.getAllProducts = async(req,res) => {
             await Promise.all(productMaterialObjects.map(aProductMaterial => {
                 const foundMaterial = productFound.materials.find(aMaterial => aMaterial.material.toString() === aProductMaterial._id.toString())
 
-                allMaterialsCost += getPriceOfQuantity(aProductMaterial.price, aProductMaterial.purchase_quantity.amount, (foundMaterial.quantity ? foundMaterial.quantity : 1));
+                const foundMaterialQuantity = convertQuantityToOtherQuantity(aProductMaterial, foundMaterial)
+
+                allMaterialsCost += getPriceOfQuantity(aProductMaterial.price, aProductMaterial.purchase_quantity.amount, foundMaterialQuantity);
             }))
 
             let productCost = allMaterialsCost + allRecipesCost + (productFound._doc.labour_cost ? productFound._doc.labour_cost : 0) + (productFound._doc.overhead_cost ? productFound._doc.overhead_cost : 0)
@@ -1675,11 +1648,7 @@ module.exports.getProductRecipes = async(req,res) => {
                 await Promise.all(fullIngredientsObjects.docs.map(async fullIngredientObject => {
                     const aFoundIngredient = fullRecipeObject.ingredients.find(ingredient => ingredient.ingredient.toString() === fullIngredientObject._id.toString());
                     
-                    const entityQuantity  = await getEntityQuantity(fullIngredientObject.purchase_quantity.unit, aFoundIngredient.unit, aFoundIngredient.quantity, req.tenantModels.unitModel)
-                    
-                    const {entitytUnit, foundUnit} = entityQuantity;
-
-                    const recipeIngredientQuantity = getChosenQuantityFromEntityUnit(foundUnit.amount, entitytUnit.amount, aFoundIngredient.quantity)
+                    const recipeIngredientQuantity = await calculateDesiredQuantityFromQuantity(fullIngredientObject, aFoundIngredient, req.tenantModels.unitModel)
 
                     totalRecipeCost += getPriceOfQuantity(fullIngredientObject.price, fullIngredientObject.purchase_quantity.amount, recipeIngredientQuantity)
                 }))
@@ -1688,12 +1657,8 @@ module.exports.getProductRecipes = async(req,res) => {
 
                 const recipeUnits = await getEntityUnits(recipeUnit, req.tenantModels.unitModel)
 
-                const entityQuantity  = await getEntityQuantity(fullRecipeObject.yield.unit, aFoundRecipe.unit, aFoundRecipe.quantity, req.tenantModels.unitModel)
-                    
-                const {entitytUnit, foundUnit} = entityQuantity;
+                const recipeQuantity = await calculateDesiredQuantityFromQuantity(fullRecipeObject, aFoundRecipe, req.tenantModels.unitModel)
 
-                const recipeQuantity = getChosenQuantityFromEntityUnit(foundUnit.amount, entitytUnit.amount, aFoundRecipe.quantity)
-                
                 return {...fullRecipeObject._doc, units: recipeUnits, yield: {...fullRecipeObject.yield, amount: aFoundRecipe.quantity, unit: recipeUnit} , cost: getPriceOfQuantity(totalRecipeCost, fullRecipeObject.yield.amount, recipeQuantity)};
             }))
 
@@ -1911,20 +1876,12 @@ module.exports.getOrderProducts = async(req,res) => {
                 await Promise.all(ingredientObjects.map(async ingredientObject => {
                     const foundIngredient = aProductRecipe.ingredients.find(anIngredient => anIngredient.ingredient.toString() === ingredientObject._id.toString())
 
-                    const entityQuantity  = await getEntityQuantity(ingredientObject.purchase_quantity.unit, foundIngredient.unit, foundIngredient.quantity, req.tenantModels.unitModel)
-
-                    const {entitytUnit, foundUnit} = entityQuantity;
-
-                    const recipeIngredientQuantity = getChosenQuantityFromEntityUnit(foundUnit.amount, entitytUnit.amount, foundIngredient.quantity)
+                    const recipeIngredientQuantity = await calculateDesiredQuantityFromQuantity(ingredientObject, foundIngredient, req.tenantModels.unitModel)
 
                     recipeCost += getPriceOfQuantity(ingredientObject.price, ingredientObject.purchase_quantity.amount, recipeIngredientQuantity) 
                 }))
 
-                const entityQuantity  = await getEntityQuantity(aProductRecipe.yield.unit, foundRecipe.unit, foundRecipe.quantity, req.tenantModels.unitModel)
-
-                const {entitytUnit, foundUnit} = entityQuantity;
-
-                const productRecipeQuantity = getChosenQuantityFromEntityUnit(foundUnit.amount, entitytUnit.amount, foundRecipe.quantity)
+                const productRecipeQuantity = await calculateDesiredQuantityFromQuantity(aProductRecipe, foundRecipe, req.tenantModels.unitModel)
 
                 //allRecipesCost += recipeCost * (foundRecipe.quantity.amount && foundRecipe.quantity.amount > 0 ? foundRecipe.quantity.amount : 1)
 
@@ -2045,6 +2002,10 @@ module.exports.fulfillOrder = async(req,res) => {
             const fullProductObjects = await ProductService.getProductsFromIdsArrayNoPagination(orderProductIds, req.tenantModels.productModel)
 
             await Promise.all(fullProductObjects.map(async fullProductObject => {
+
+                const foundProduct = order.products.find(aProduct => aProduct.product.toString() === fullProductObject._id.toString())
+
+                const productQuantity = foundProduct.quantity;
                 //find All recipes and materials in products
                 //find All ingredients in recipes
                 //get the quantity specified for each material and ingredient for respective recipes and products
@@ -2062,7 +2023,12 @@ module.exports.fulfillOrder = async(req,res) => {
                         const foundRecipe = fullProductObject.recipes.find(aRecipe => aRecipe.recipe.toString() === fullRecipeObjectItem._id.toString())
 
                         //The quantity of the recipe
-                        const recipeQuantity = foundRecipe.quantity.amount;
+                        const recipeQuantity = foundRecipe.quantity;
+
+                        //Total quantity of the product and recipe
+                        //---------------------------
+                        const  productRecipeQuantity = productQuantity * recipeQuantity
+                        //---------------------------
 
                         const ingredientsIds = fullRecipeObjectItem.ingredients.map(anIngredient => {
                             return anIngredient.ingredient
@@ -2073,7 +2039,9 @@ module.exports.fulfillOrder = async(req,res) => {
                         await Promise.all(fullIngredientObjects.map(async fullIngredientObjectsItem => {
                             const foundIngredient = fullRecipeObjectItem.ingredients.find(anIngredient => anIngredient.ingredient.toString() === fullIngredientObjectsItem._id.toString())
 
-                            const quantityToDeduct = foundIngredient.quantity * (recipeQuantity ? recipeQuantity : 1);
+                            const chosenQuantityConverted = await calculateDesiredQuantityFromQuantity(fullIngredientObjectsItem, foundIngredient, req.tenantModels.unitModel)
+
+                            const quantityToDeduct = productRecipeQuantity * chosenQuantityConverted
 
                             fullIngredientObjectsItem.quantity_in_stock = Math.abs(fullIngredientObjectsItem.quantity_in_stock - quantityToDeduct);
 
@@ -2096,7 +2064,9 @@ module.exports.fulfillOrder = async(req,res) => {
                     await Promise.all(fullMaterialObjects.map(async fullMaterialObject => {
                         const foundMaterial = fullProductObject.materials.find(aMaterial => aMaterial.material.toString() === fullMaterialObject._id.toString())
 
-                        fullMaterialObject.quantity_in_stock = Math.abs(fullMaterialObject.quantity_in_stock - foundMaterial.quantity)
+                        const quantityToDeduct = productQuantity * convertQuantityToOtherQuantity(fullMaterialObject, foundMaterial) 
+
+                        fullMaterialObject.quantity_in_stock = Math.abs(fullMaterialObject.quantity_in_stock - quantityToDeduct)
 
                         await MaterialService.updateMaterial(fullMaterialObject._id, fullMaterialObject, req.tenantModels.materialModel)
 
@@ -2300,8 +2270,6 @@ module.exports.getProfitTableProductChanges = async(req,res) => {
                     return aRecipe._id
                 })
 
-                console.log(recipesIdsArray)
-
                 //find all products based on the list of recipes ids found above
                 products = await ProductService.getProductsFromRecipesArray(recipesIdsArray, req.tenantModels.productModel) 
             }
@@ -2346,11 +2314,7 @@ module.exports.getProfitTableProductChanges = async(req,res) => {
                                     }
                                 }
 
-                                const entityQuantity  = await getEntityQuantity(allIngredientObject.purchase_quantity.unit, aFoundIngredient.unit, aFoundIngredient.quantity, req.tenantModels.unitModel)
-
-                                const {entitytUnit, foundUnit} = entityQuantity;
-
-                                const recipeIngredientQuantity = getChosenQuantityFromEntityUnit(foundUnit.amount, entitytUnit.amount, aFoundIngredient.quantity)
+                                const recipeIngredientQuantity = await calculateDesiredQuantityFromQuantity(allIngredientObject, aFoundIngredient, req.tenantModels.unitModel)
 
                                 return acc + getPriceOfQuantity(allIngredientObject.price, allIngredientObject.purchase_quantity.amount, recipeIngredientQuantity)
                             },0))
@@ -2358,8 +2322,6 @@ module.exports.getProfitTableProductChanges = async(req,res) => {
                             //join the total cost of the recipe to the total cost of all recipes
                             costOfRecipes += (recipeQuantity * allIngredientsCost);
                         }
-
-                        console.log({costOfRecipes})
 
                         return true
                     }))
@@ -2481,6 +2443,11 @@ module.exports.getOrderShoppingList = async (req,res) => {
         const orderIngredients = {}
 
         await Promise.all(orderProducts.map(async anOrderProduct => {
+
+            const foundProduct = order.products.find(aProduct => aProduct.product.toString() === anOrderProduct._id.toString())
+
+            const productQuantity  = foundProduct.quantity
+
             //get All materials and ingredients for this product and add to the object of materials and ingredients respectively
 
             //We handle the materials part first
@@ -2494,27 +2461,34 @@ module.exports.getOrderShoppingList = async (req,res) => {
                 fullMaterialObjects.map(fullMaterialObject => {
                     const aFoundMaterial = anOrderProduct.materials.find(anOrderProductMaterial => anOrderProductMaterial.material.toString() === fullMaterialObject._id.toString())
 
-                    if(!orderMaterials[fullMaterialObject._id]){
-                        const cost = getPriceOfQuantity(fullMaterialObject.price, fullMaterialObject.purchase_quantity.amount, aFoundMaterial.quantity)
+                    let chosenQuantityConverted = convertQuantityToOtherQuantity(fullMaterialObject, aFoundMaterial)
+                    chosenQuantityConverted = chosenQuantityConverted * productQuantity
 
-                        const resolvedQuantity = fullMaterialObject.quantity_in_stock - aFoundMaterial.quantity
+                    const priceOfQuantity = getPriceOfQuantity(fullMaterialObject.price, fullMaterialObject.purchase_quantity.amount, chosenQuantityConverted)
+
+                    if(!orderMaterials[fullMaterialObject._id]){
+                        const cost = priceOfQuantity
+
+                        const resolvedQuantity = fullMaterialObject.quantity_in_stock - chosenQuantityConverted
 
                         const status = resolvedQuantity < 0 ? "LOW" : "NORMAL"
 
                         const quantityToFulfill = resolvedQuantity < 0 ? Math.abs(fullMaterialObject.quantity_in_stock - aFoundMaterial.quantity) : 0
 
-                        orderMaterials[fullMaterialObject._id] = { ...fullMaterialObject, cost: cost, status: status, quantity: aFoundMaterial.quantity, quantityToFulfill: quantityToFulfill}
+                        const unit = defaultMaterialUnits.find(defaultMaterialUnit => defaultMaterialUnit._id.toString() === aFoundMaterial.unit.toString())
+
+                        orderMaterials[fullMaterialObject._id] = { ...fullMaterialObject, unit:unit, cost: cost, status: status, quantity: chosenQuantityConverted, quantityToFulfill: quantityToFulfill}
                     }
                     else{
-                        const cost = getPriceOfQuantity(fullMaterialObject.price, fullMaterialObject.purchase_quantity.amount, aFoundMaterial.quantity) + orderMaterials[fullMaterialObject._id].cost
+                        const cost = priceOfQuantity + orderMaterials[fullMaterialObject._id].cost
 
-                        const resolvedQuantity = fullMaterialObject.quantity_in_stock - orderMaterials[fullMaterialObject._id].quantity - aFoundMaterial.quantity
+                        const resolvedQuantity = fullMaterialObject.quantity_in_stock - orderMaterials[fullMaterialObject._id].quantity - chosenQuantityConverted
 
                         const status = resolvedQuantity < 0 ? "LOW" : "NORMAL"
 
                         const quantityToFulfill = resolvedQuantity < 0 ? Math.abs(resolvedQuantity) : 0
 
-                        orderMaterials[fullMaterialObject._id] = { ...fullMaterialObject, cost: cost, status: status, quantity: orderMaterials[fullMaterialObject._id].quantity + aFoundMaterial.quantity, quantityToFulfill: quantityToFulfill}
+                        orderMaterials[fullMaterialObject._id] = { ...fullMaterialObject, cost: cost, status: status, quantity: orderMaterials[fullMaterialObject._id].quantity + chosenQuantityConverted, quantityToFulfill: quantityToFulfill}
                     }
                 })
             }
@@ -2528,8 +2502,14 @@ module.exports.getOrderShoppingList = async (req,res) => {
                 const fullRecipesObjects = await MaterialService.findMaterialsFromArrayIdsNoPagination(anOrderProductRecipesIds, req.tenantModels.recipeModel)
 
                 await Promise.all(fullRecipesObjects.map(async fullRecipeObject => {
-                    //get ingredients in this recipe and calculate cost
+                    const foundRecipe = anOrderProduct.recipes.find(aRecipe => aRecipe.recipe.toString() === fullRecipeObject._id.toString())
 
+                    const recipeQuantity =  foundRecipe.quantity 
+
+                    const productRecipeQuantity = productQuantity * recipeQuantity
+
+
+                    //get ingredients in this recipe and calculate cost
                     if(fullRecipeObject.ingredients && fullRecipeObject.ingredients.length > 0){
                         const ingredientsIdsArray = fullRecipeObject.ingredients.map(fullRecipeObjectIngredient => {
                             return fullRecipeObjectIngredient.ingredient
@@ -2539,33 +2519,39 @@ module.exports.getOrderShoppingList = async (req,res) => {
                         const fullIngredientObjects = await IngredientService.findIngredientsFromArrayIdsNoPagination(ingredientsIdsArray, req.tenantModels.ingredientModel)
 
                         if(fullIngredientObjects && fullIngredientObjects.length > 0){
-                            fullIngredientObjects.map(fullIngredientObject => {
+                            await Promise.all(fullIngredientObjects.map(async fullIngredientObject => {
                                 const aFoundIngredient = fullRecipeObject.ingredients.find(fullRecipeObjectIngredient => fullRecipeObjectIngredient.ingredient.toString() === fullIngredientObject._id.toString())
 
+                                let chosenQuantityConverted = await calculateDesiredQuantityFromQuantity(fullIngredientObject, aFoundIngredient, req.tenantModels.unitModel)
+                                chosenQuantityConverted = chosenQuantityConverted * productRecipeQuantity;
+
+                                const priceOfQuantity = getPriceOfQuantity(fullIngredientObject.price, fullIngredientObject.purchase_quantity.amount, chosenQuantityConverted)
+
                                 if(!orderIngredients[fullIngredientObject._id]){
-                                    
-                                    const cost = getPriceOfQuantity(fullIngredientObject.price, fullIngredientObject.purchase_quantity.amount, aFoundIngredient.quantity)
-            
-                                    const resolvedQuantity = fullIngredientObject.quantity_in_stock - aFoundIngredient.quantity
+                                    const cost = priceOfQuantity
+
+                                    const resolvedQuantity = fullIngredientObject.quantity_in_stock - chosenQuantityConverted
             
                                     const status = resolvedQuantity < 0 ? "LOW" : "NORMAL"
             
                                     const quantityToFulfill = resolvedQuantity < 0 ? Math.abs(fullIngredientObject.quantity_in_stock - aFoundIngredient.quantity) : 0
-            
-                                    orderIngredients[fullIngredientObject._id] = { ...fullIngredientObject, cost: cost, status: status, quantity: aFoundIngredient.quantity, quantityToFulfill: quantityToFulfill}
+                                    
+                                    const unit = await UnitService.getUnit(aFoundIngredient.unit, req.tenantModels.unitModel)
+
+                                    orderIngredients[fullIngredientObject._id] = { ...fullIngredientObject, unit:unit, cost: cost, status: status, quantity: chosenQuantityConverted, quantityToFulfill: quantityToFulfill}
                                 }
                                 else{
-                                    const cost = getPriceOfQuantity(fullIngredientObject.price, fullIngredientObject.purchase_quantity.amount, aFoundIngredient.quantity) + orderIngredients[fullIngredientObject._id].cost
+                                    const cost =  priceOfQuantity + orderIngredients[fullIngredientObject._id].cost
             
-                                    const resolvedQuantity = fullIngredientObject.quantity_in_stock - orderIngredients[fullIngredientObject._id].quantity - aFoundIngredient.quantity
+                                    const resolvedQuantity = fullIngredientObject.quantity_in_stock - orderIngredients[fullIngredientObject._id].quantity - chosenQuantityConverted
             
                                     const status = resolvedQuantity < 0 ? "LOW" : "NORMAL"
             
                                     const quantityToFulfill = resolvedQuantity < 0 ? Math.abs(resolvedQuantity) : 0
             
-                                    orderIngredients[fullIngredientObject._id] = { ...fullIngredientObject, cost: cost, status: status, quantity: orderIngredients[fullIngredientObject._id].quantity + aFoundIngredient.quantity, quantityToFulfill: quantityToFulfill}
+                                    orderIngredients[fullIngredientObject._id] = { ...fullIngredientObject, cost: cost, status: status, quantity: orderIngredients[fullIngredientObject._id].quantity + chosenQuantityConverted, quantityToFulfill: quantityToFulfill}
                                 }
-                            })
+                            }))
                         }
                     }
                 }))

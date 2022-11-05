@@ -1,4 +1,6 @@
 
+const UnitService = require("../service/unit.service")
+
 const getPriceOfQuantity = (originalPrice, originalQuantity, requiredQuantity) => {
     return ( originalPrice * requiredQuantity ) / originalQuantity
 }
@@ -96,6 +98,29 @@ module.exports.isDefaultUnit = (unit, plainDefaultUnits) => {
 
 
 
+//For Materials
+module.exports.convertQuantityToOtherQuantity = (fullMaterial, foundMaterial) => {
+    const foundQuantity = foundMaterial.quantity
+
+    const fullQuantity = fullMaterial.purchase_quantity.amount
+
+    if(foundMaterial.unit == fullMaterial.purchase_quantity.unit){
+        return foundQuantity;
+    }
+
+    const piecesQuantity =  fullMaterial.pieces
+
+    const foundMaterialUnit = defaultMaterialUnits.filter(defaultUnit => defaultUnit._id == foundMaterial.unit).shift()
+
+    if(foundMaterialUnit.name.toLowerCase() == "packets"){
+        return foundQuantity * piecesQuantity
+    }
+
+    return foundQuantity / piecesQuantity
+}
+
+
+
 
 module.exports.calculateCostOfAddedMaterial = (fullMaterial, foundMaterial) => {
     const foundQuantity = foundMaterial.quantity
@@ -119,4 +144,36 @@ module.exports.calculateCostOfAddedMaterial = (fullMaterial, foundMaterial) => {
     }
 
     return (fullPrice * foundQuantity) / (fullQuantity * piecesQuantity)
+}
+
+
+
+
+//Ingredients
+module.exports.calculateDesiredQuantityFromQuantity = async (fullEntity, desiredEntity, unitModel) => {
+
+    //Will cover both ingredients and recipes
+    const fullEntityUnitId = fullEntity.purchase_quantity ? fullEntity.purchase_quantity.unit : fullEntity.yield.unit
+
+    if(fullEntityUnitId == desiredEntity.unit){
+        return desiredEntity.quantity
+    }
+
+    const fullEntityUnit = await UnitService.getUnit(fullEntityUnitId, unitModel)
+    const desiredEntityUnit = await UnitService.getUnit(desiredEntity.unit, unitModel)
+
+    let convertedQuantity = 0
+
+    if(fullEntityUnit.isBase || desiredEntityUnit.isBase){
+        convertedQuantity = desiredEntity.quantity * fullEntityUnit.amount / desiredEntityUnit.amount
+    }
+
+    if(!fullEntityUnit.isBase && !desiredEntityUnit.isBase){
+        if(fullEntityUnit.parent != desiredEntityUnit.parent){
+            //Neither unit is base and we have made sure they have the same parent before converting
+            convertedQuantity = desiredEntity.quantity * fullEntityUnit.amount / desiredEntityUnit.amount
+        }
+    }
+
+    return convertedQuantity
 }
